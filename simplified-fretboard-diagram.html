@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simplified Fretboard Diagram</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }
+        .fretboard-container { 
+            position: relative; 
+            margin-top: 50px; 
+            border-top: 2px solid #333;
+            border-bottom: 2px solid #333;
+            padding: 10px 0;
+        }
+        .fretboard { 
+            display: flex; 
+            overflow-x: auto; 
+            padding: 30px 0;
+        }
+        .fret { min-width: 50px; height: 150px; border-right: 2px solid #000000; position: relative; flex-shrink: 0; }
+        .fret:nth-child(2) { border-left: 2px solid #000; min-width: 50px; }
+        .fret:nth-child(4), .fret:nth-child(6), .fret:nth-child(8), .fret:nth-child(10), .fret:nth-child(13), .fret:nth-child(16) { 
+            background-color: #ece9fb; 
+        }
+        .string { width: 100%; height: 2px; background-color: #999; position: absolute; }
+        .note { 
+            width: 30px; 
+            height: 30px; 
+            border-radius: 50%; 
+            border: 1px solid #333; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            position: absolute; 
+            left: 15px; 
+            font-size: 12px; 
+            color: #333; 
+            font-weight: bold;
+            z-index: 1;
+        }
+        .open-note { left: 0; }
+        .fret-label { position: absolute; bottom: -30px; width: 100%; text-align: center; font-size: 12px; }
+        .scale-display { margin-top: 40px; display: flex; flex-wrap: wrap; }
+        .scale-note { display: flex; flex-direction: column; align-items: center; margin-right: 10px; margin-bottom: 10px; }
+        .note-circle { width: 40px; height: 40px; border: 1px solid #333; border-radius: 50%; display: flex; justify-content: center; align-items: center; margin-bottom: 5px; font-weight: bold; color: #333; }
+        .interval-label { font-weight: bold; }
+        .controls { margin-bottom: 20px; }
+        select, button { margin-right: 10px; padding: 5px; }
+        
+        /* Interval colors */
+        .interval-1 { background-color: #ff6666; }
+        .interval-2, .interval-9 { background-color: #ff9966; }
+        .interval-3, .interval-10 { background-color: #ffcc66; }
+        .interval-4, .interval-11 { background-color: #ffff66; }
+        .interval-5 { background-color: #ccff66; }
+        .interval-6, .interval-13 { background-color: #66ff66; }
+        .interval-7 { background-color: #66ffff; }
+        .interval-b3, .interval-b10 { background-color: #ffaa66; }
+        .interval-b5 { background-color: #ddff66; }
+        .interval-b6 { background-color: #66ffcc; }
+        .interval-b7 { background-color: #b379fe; }
+        .interval-#5 { background-color: #ff66cc; }
+        .interval-bb7 { background-color: #ff6699; }
+    </style>
+</head>
+<body>
+    <h1>Simplified Fretboard Diagram</h1>
+    <div class="controls">
+        <label for="key-select">Select Key:</label>
+        <select id="key-select">
+            <option value="C">C</option>
+            <option value="C#">C#</option>
+            <option value="D">D</option>
+            <option value="D#">D#</option>
+            <option value="E">E</option>
+            <option value="F">F</option>
+            <option value="F#">F#</option>
+            <option value="G">G</option>
+            <option value="G#">G#</option>
+            <option value="A">A</option>
+            <option value="A#">A#</option>
+            <option value="B">B</option>
+        </select>
+        <label for="scale-type-select">Select Scale/Arpeggio:</label>
+        <select id="scale-type-select">
+            <option value="major">Major Scale</option>
+            <option value="minor">Natural Minor Scale</option>
+            <option value="harmonic_minor">Harmonic Minor Scale</option>
+            <option value="melodic_minor">Melodic Minor Scale</option>
+            <option value="major_pentatonic">Major Pentatonic Scale</option>
+            <option value="minor_pentatonic">Minor Pentatonic Scale</option>
+            <option value="blues">Blues Scale</option>
+            <option value="major7">Major 7 Arpeggio</option>
+            <option value="minor7">Minor 7 Arpeggio</option>
+            <option value="dominant7">Dominant 7 Arpeggio</option>
+            <option value="min7b5">Min7b5 Arpeggio</option>
+            <option value="minMaj7">MinMaj7 Arpeggio</option>
+            <option value="maj7sharp5">Maj7#5 Arpeggio</option>
+            <option value="dim">Dim Arpeggio</option>
+            <option value="maj7b5">Maj7b5 Arpeggio</option>
+            <option value="dom7sharp5">Dom7#5 Arpeggio</option>
+            <option value="dom7b5">Dom7b5 Arpeggio</option>
+        </select>
+    </div>
+    <div class="fretboard-container">
+        <div id="fretboard" class="fretboard"></div>
+    </div>
+    <div id="scale-display" class="scale-display"></div>
+
+    <script>
+        const allNotes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+        const strings = ['E', 'B', 'G', 'D', 'A', 'E'];
+        const frets = 17;
+
+        function getScale(key, type) {
+            const keyIndex = allNotes.indexOf(key);
+            const intervals = {
+                major: [0, 2, 4, 5, 7, 9, 11],
+                minor: [0, 2, 3, 5, 7, 8, 10],
+                harmonic_minor: [0, 2, 3, 5, 7, 8, 11],
+                melodic_minor: [0, 2, 3, 5, 7, 9, 11],
+                major_pentatonic: [0, 2, 4, 7, 9],
+                minor_pentatonic: [0, 3, 5, 7, 10],
+                blues: [0, 3, 5, 6, 7, 10],
+                major7: [0, 4, 7, 11],
+                minor7: [0, 3, 7, 10],
+                dominant7: [0, 4, 7, 10],
+                min7b5: [0, 3, 6, 10],
+                minMaj7: [0, 3, 7, 11],
+                maj7sharp5: [0, 4, 8, 11],
+                dim: [0, 3, 6, 9],
+                maj7b5: [0, 4, 6, 11],
+                dom7sharp5: [0, 4, 8, 10],
+                dom7b5: [0, 4, 6, 10]
+            };
+            return intervals[type].map(interval => allNotes[(keyIndex + interval) % 12]);
+        }
+
+        function getIntervalName(index, scaleType) {
+            const intervalNames = {
+                major: ['1', '2', '3', '4', '5', '6', '7'],
+                minor: ['1', '2', 'b3', '4', '5', 'b6', 'b7'],
+                harmonic_minor: ['1', '2', 'b3', '4', '5', 'b6', '7'],
+                melodic_minor: ['1', '2', 'b3', '4', '5', '6', '7'],
+                major_pentatonic: ['1', '2', '3', '5', '6'],
+                minor_pentatonic: ['1', 'b3', '4', '5', 'b7'],
+                blues: ['1', 'b3', '4', 'b5', '5', 'b7'],
+                major7: ['1', '3', '5', '7'],
+                minor7: ['1', 'b3', '5', 'b7'],
+                dominant7: ['1', '3', '5', 'b7'],
+                min7b5: ['1', 'b3', 'b5', 'b7'],
+                minMaj7: ['1', 'b3', '5', '7'],
+                maj7sharp5: ['1', '3', '#5', '7'],
+                dim: ['1', 'b3', 'b5', 'bb7'],
+                maj7b5: ['1', '3', 'b5', '7'],
+                dom7sharp5: ['1', '3', '#5', 'b7'],
+                dom7b5: ['1', '3', 'b5', 'b7']
+            };
+            return intervalNames[scaleType][index];
+        }
+
+        function updateFretboard() {
+            const key = document.getElementById('key-select').value;
+            const scaleType = document.getElementById('scale-type-select').value;
+            const scale = getScale(key, scaleType);
+            const fretboard = document.getElementById('fretboard');
+            fretboard.innerHTML = '';
+
+            // Create open string column
+            const openStringColumn = createFret('Open', true);
+            fretboard.appendChild(openStringColumn);
+
+            // Create fretted columns
+            for (let i = 1; i <= frets; i++) {
+                const fret = createFret(i);
+                fretboard.appendChild(fret);
+            }
+
+            updateScaleDisplay(scale, scaleType);
+        }
+
+        function createFret(label, isOpen = false) {
+            const fret = document.createElement('div');
+            fret.className = 'fret';
+            
+            for (let j = 0; j < 6; j++) {
+                const string = document.createElement('div');
+                string.className = 'string';
+                string.style.top = `${j * 25 + 15}px`;
+                fret.appendChild(string);
+
+                const note = isOpen ? strings[j] : getNoteOnFret(strings[j], label);
+                const key = document.getElementById('key-select').value;
+                const scaleType = document.getElementById('scale-type-select').value;
+                const scale = getScale(key, scaleType);
+                
+                if (scale.includes(note)) {
+                    const noteElement = document.createElement('div');
+                    noteElement.className = `note ${isOpen ? 'open-note' : ''}`;
+                    const intervalIndex = scale.indexOf(note);
+                    const intervalName = getIntervalName(intervalIndex, scaleType);
+                    noteElement.classList.add(`interval-${intervalName}`);
+                    noteElement.textContent = note;
+                    noteElement.style.top = `${j * 25}px`;
+                    fret.appendChild(noteElement);
+                }
+            }
+
+            const fretLabel = document.createElement('div');
+            fretLabel.className = 'fret-label';
+            fretLabel.textContent = label;
+            fret.appendChild(fretLabel);
+
+            return fret;
+        }
+
+        function updateScaleDisplay(scale, scaleType) {
+            const scaleDisplay = document.getElementById('scale-display');
+            scaleDisplay.innerHTML = '';
+            scale.forEach((note, index) => {
+                const noteElement = document.createElement('div');
+                noteElement.className = 'scale-note';
+                const intervalName = getIntervalName(index, scaleType);
+                
+                const noteCircle = document.createElement('div');
+                noteCircle.className = `note-circle interval-${intervalName}`;
+                noteCircle.textContent = note;
+                
+                const intervalLabel = document.createElement('div');
+                intervalLabel.className = 'interval-label';
+                intervalLabel.textContent = intervalName;
+                
+                noteElement.appendChild(noteCircle);
+                noteElement.appendChild(intervalLabel);
+                scaleDisplay.appendChild(noteElement);
+            });
+        }
+
+        function getNoteOnFret(openNote, fret) {
+            const startIndex = allNotes.indexOf(openNote);
+            return allNotes[(startIndex + parseInt(fret)) % 12];
+        }
+
+        document.getElementById('key-select').addEventListener('change', updateFretboard);
+        document.getElementById('scale-type-select').addEventListener('change', updateFretboard);
+
+        // Initialize fretboard with the default key and scale
+        updateFretboard();
+    </script>
+</body>
+</html>

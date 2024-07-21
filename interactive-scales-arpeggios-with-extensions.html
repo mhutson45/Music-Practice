@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Scales and Arpeggios</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; padding: 20px; }
+        select, button { font-size: 16px; margin-bottom: 20px; }
+        table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        .root { color: red; font-weight: bold; }
+        .third { color: blue; }
+        .fifth { color: green; }
+        .seventh { color: purple; }
+        .extension { color: orange; }
+        .button-group { margin-top: 10px; }
+        .button-group button { margin-right: 5px; }
+    </style>
+</head>
+<body>
+    <h1>Interactive Scales and Arpeggios</h1>
+    <label for="rootNote">Select Root Note: </label>
+    <select id="rootNote">
+        <option value="C">C</option>
+        <option value="C#">C#/Db</option>
+        <option value="D">D</option>
+        <option value="D#">D#/Eb</option>
+        <option value="E">E</option>
+        <option value="F">F</option>
+        <option value="F#">F#/Gb</option>
+        <option value="G">G</option>
+        <option value="G#">G#/Ab</option>
+        <option value="A">A</option>
+        <option value="A#">A#/Bb</option>
+        <option value="B">B</option>
+    </select>
+
+    <div id="scalesArpeggios"></div>
+    <div id="diatonicArpeggios"></div>
+
+    <script>
+        const notes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+        const majorScale = [0, 2, 4, 5, 7, 9, 11];
+        const naturalMinorScale = [0, 2, 3, 5, 7, 8, 10];
+        const harmonicMinorScale = [0, 2, 3, 5, 7, 8, 11];
+        const melodicMinorScale = [0, 2, 3, 5, 7, 9, 11];
+        const majorPentatonicScale = [0, 2, 4, 7, 9];
+        const minorPentatonicScale = [0, 3, 5, 7, 10];
+
+        function getNote(root, interval) {
+            return notes[(notes.indexOf(root) + interval + 12) % 12];
+        }
+
+        function getScale(root, intervals) {
+            return intervals.map(interval => getNote(root, interval));
+        }
+
+        function colorNote(note, index, isExtension = false) {
+            const classes = ['root', '', '', 'third', '', 'fifth', '', 'seventh'];
+            const className = isExtension ? 'extension' : (classes[index] || '');
+            return className ? `<span class="${className}">${note}</span>` : note;
+        }
+
+        function updateCharts() {
+            const root = document.getElementById('rootNote').value;
+            updateScalesArpeggios(root);
+            updateDiatonicArpeggios(root);
+        }
+
+        function updateScalesArpeggios(root) {
+            const major = getScale(root, majorScale);
+            const minor = getScale(root, naturalMinorScale);
+            const harmonic = getScale(root, harmonicMinorScale);
+            const melodic = getScale(root, melodicMinorScale);
+            const majorPentatonic = getScale(root, majorPentatonicScale);
+            const minorPentatonic = getScale(root, minorPentatonicScale);
+
+            let html = `
+                <h2>Scales and Arpeggios for ${root}</h2>
+                <h3>Scales</h3>
+                <table>
+                    <tr><th>Scale Type</th><th>Notes</th></tr>
+                    <tr><td>${root} Major</td><td>${major.map((note, i) => colorNote(note, i)).join(' ')}</td></tr>
+                    <tr><td>${root} Natural Minor</td><td>${minor.map((note, i) => colorNote(note, i)).join(' ')}</td></tr>
+                    <tr><td>${root} Harmonic Minor</td><td>${harmonic.map((note, i) => colorNote(note, i)).join(' ')}</td></tr>
+                    <tr><td>${root} Melodic Minor</td><td>${melodic.map((note, i) => colorNote(note, i)).join(' ')}</td></tr>
+                    <tr><td>${root} Major Pentatonic</td><td>${majorPentatonic.map((note, i) => colorNote(note, majorScale.indexOf(majorPentatonicScale[i]))).join(' ')}</td></tr>
+                    <tr><td>${root} Minor Pentatonic</td><td>${minorPentatonic.map((note, i) => colorNote(note, naturalMinorScale.indexOf(minorPentatonicScale[i]))).join(' ')}</td></tr>
+                </table>
+                <h3>Arpeggios</h3>
+                <table id="arpeggioTable">
+                    <tr><th>Arpeggio Type</th><th>Notes</th><th>Extensions</th></tr>
+                    ${createArpeggioRow(root, 'Maj7', [0,4,7,11], [2,6,9])}
+                    ${createArpeggioRow(root, '7', [0,4,7,10], [2,5,9])}
+                    ${createArpeggioRow(root, 'm7', [0,3,7,10], [2,5,8])}
+                    ${createArpeggioRow(root, 'm7b5', [0,3,6,10], [2,5,8])}
+                    ${createArpeggioRow(root, 'mMaj7', [0,3,7,11], [2,5,9])}
+                    ${createArpeggioRow(root, 'Maj7#5', [0,4,8,11], [2,6,9])}
+                    ${createArpeggioRow(root, '°7', [0,3,6,9], [2,5,8])}
+                </table>
+            `;
+
+            document.getElementById('scalesArpeggios').innerHTML = html;
+            attachArpeggioListeners();
+        }
+
+        function createArpeggioRow(root, type, intervals, extensions) {
+            const baseNotes = intervals.map(i => getNote(root, i));
+            const extNotes = extensions.map(i => getNote(root, i));
+            return `
+                <tr>
+                    <td>${root}${type}</td>
+                    <td class="arpeggio-notes">${baseNotes.map((note, i) => colorNote(note, intervals[i])).join(' ')}</td>
+                    <td>
+                        <div class="button-group">
+                            ${extNotes.map((note, i) => `
+                                <button class="ext-button" data-note="${note}" data-index="${extensions[i]}">Add ${note}</button>
+                            `).join('')}
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }
+
+        function attachArpeggioListeners() {
+            document.querySelectorAll('.ext-button').forEach(button => {
+                button.addEventListener('click', function() {
+                    const note = this.getAttribute('data-note');
+                    const index = this.getAttribute('data-index');
+                    const notesCell = this.closest('tr').querySelector('.arpeggio-notes');
+                    if (this.classList.contains('active')) {
+                        notesCell.innerHTML = notesCell.innerHTML.replace(` ${colorNote(note, index, true)}`, '');
+                        this.classList.remove('active');
+                    } else {
+                        notesCell.innerHTML += ` ${colorNote(note, index, true)}`;
+                        this.classList.add('active');
+                    }
+                });
+            });
+        }
+
+        function updateDiatonicArpeggios(root) {
+            const major = getScale(root, majorScale);
+            const chordTypes = ['Maj7', 'm7', 'm7', 'Maj7', '7', 'm7', 'm7b5'];
+            const chordIntervals = [
+                [0, 4, 7, 11], // Maj7
+                [0, 3, 7, 10], // m7
+                [0, 3, 7, 10], // m7
+                [0, 4, 7, 11], // Maj7
+                [0, 4, 7, 10], // 7
+                [0, 3, 7, 10], // m7
+                [0, 3, 6, 10]  // m7b5
+            ];
+
+            let html = `
+                <h2>Diatonic Arpeggios for ${root} Major Scale</h2>
+                <table>
+                    <tr><th>Degree</th><th>Arpeggio</th><th>Notes</th></tr>
+            `;
+
+            major.forEach((note, i) => {
+                const chordNotes = chordIntervals[i].map(interval => getNote(note, interval));
+                html += `
+                    <tr>
+                        <td>${['I', 'ii', 'iii', 'IV', 'V', 'vi', 'vii°'][i]}</td>
+                        <td>${note}${chordTypes[i]}</td>
+                        <td>${chordNotes.map((n, j) => colorNote(n, chordIntervals[i][j])).join(' ')}</td>
+                    </tr>
+                `;
+            });
+
+            html += '</table>';
+            document.getElementById('diatonicArpeggios').innerHTML = html;
+        }
+
+        document.getElementById('rootNote').addEventListener('change', updateCharts);
+        updateCharts();
+    </script>
+</body>
+</html>

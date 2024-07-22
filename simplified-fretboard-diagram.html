@@ -67,8 +67,8 @@
 <body>
     <h1>Simplified Fretboard Diagram</h1>
     <div class="controls">
-        <label for="key-select">Select Key:</label>
-        <select id="key-select">
+        <label for="key-select1">Select Key (Fretboard 1):</label>
+        <select id="key-select1">
             <option value="C">C</option>
             <option value="C#">C#</option>
             <option value="D">D</option>
@@ -82,8 +82,8 @@
             <option value="A#">A#</option>
             <option value="B">B</option>
         </select>
-        <label for="scale-type-select">Select Scale/Arpeggio:</label>
-        <select id="scale-type-select">
+        <label for="scale-type-select1">Select Scale/Arpeggio (Fretboard 1):</label>
+        <select id="scale-type-select1">
             <option value="major">Major Scale</option>
             <option value="minor">Natural Minor Scale</option>
             <option value="harmonic_minor">Harmonic Minor Scale</option>
@@ -104,7 +104,44 @@
         </select>
     </div>
     <div class="fretboard-container">
-        <div id="fretboard" class="fretboard"></div>
+        <div id="fretboard1" class="fretboard"></div>
+    </div>
+    <div class="controls">
+        <label for="key-select2">Select Key (Fretboard 2):</label>
+        <select id="key-select2">
+            <option value="C">C</option>
+            <option value="C#">C#</option>
+            <option value="D">D</option>
+            <option value="D#">D#</option>
+            <option value="E">E</option>
+            <option value="F">F</option>
+            <option value="F#">F#</option>
+            <option value="G">G</option>
+            <option value="G#">G#</option>
+            <option value="A">A</option>
+            <option value="A#">A#</option>
+            <option value="B">B</option>
+        </select>
+        <label for="scale-type-select2">Select Scale/Arpeggio (Fretboard 2):</label>
+        <select id="scale-type-select2">
+            <option value="major">Major Scale</option>
+            <option value="minor">Natural Minor Scale</option>
+            <option value="harmonic_minor">Harmonic Minor Scale</option>
+            <option value="melodic_minor">Melodic Minor Scale</option>
+            <option value="major_pentatonic">Major Pentatonic Scale</option>
+            <option value="minor_pentatonic">Minor Pentatonic Scale</option>
+            <option value="blues">Blues Scale</option>
+            <option value="major7">Major 7 Arpeggio</option>
+            <option value="minor7">Minor 7 Arpeggio</option>
+            <option value="dominant7">Dominant 7 Arpeggio</option>
+            <option value="min7b5">Min7b5 Arpeggio</option>
+            <option value="minMaj7">MinMaj7 Arpeggio</option>
+            <option value="maj7sharp5">Maj7#5 Arpeggio</option>
+            <option value="dim">Dim Arpeggio</option>
+            <option value="maj7b5">Maj7b5 Arpeggio</option>
+            <option value="dom7sharp5">Dom7#5 Arpeggio</option>
+            <option value="dom7b5">Dom7b5 Arpeggio</option>
+        </select>
     </div>
     <div class="fretboard-container">
         <div id="fretboard2" class="fretboard"></div>
@@ -163,46 +200,27 @@
             return intervalNames[scaleType][index];
         }
 
-        function updateFretboard() {
-            const key = document.getElementById('key-select').value;
-            const scaleType = document.getElementById('scale-type-select').value;
+        function updateFretboard(fretboardId, keySelectId, scaleTypeSelectId) {
+            const key = document.getElementById(keySelectId).value;
+            const scaleType = document.getElementById(scaleTypeSelectId).value;
             const scale = getScale(key, scaleType);
-            const fretboard = document.getElementById('fretboard');
+            const fretboard = document.getElementById(fretboardId);
             fretboard.innerHTML = '';
 
             // Create open string column
-            const openStringColumn = createFret('Open', true);
+            const openStringColumn = createFret('Open', true, scale, scaleType);
             fretboard.appendChild(openStringColumn);
 
             // Create fretted columns
             for (let i = 1; i <= frets; i++) {
-                const fret = createFret(i);
+                const fret = createFret(i, false, scale, scaleType);
                 fretboard.appendChild(fret);
             }
 
             updateScaleDisplay(scale, scaleType);
-            updateFretboard2(); // Update the second fretboard as well
         }
 
-        function updateFretboard2() {
-            const key = document.getElementById('key-select').value;
-            const scaleType = document.getElementById('scale-type-select').value;
-            const scale = getScale(key, scaleType);
-            const fretboard2 = document.getElementById('fretboard2');
-            fretboard2.innerHTML = '';
-
-            // Create open string column
-            const openStringColumn2 = createFret('Open', true);
-            fretboard2.appendChild(openStringColumn2);
-
-            // Create fretted columns
-            for (let i = 1; i <= frets; i++) {
-                const fret = createFret(i);
-                fretboard2.appendChild(fret);
-            }
-        }
-
-        function createFret(label, isOpen = false) {
+        function createFret(label, isOpen, scale, scaleType) {
             const fret = document.createElement('div');
             fret.className = 'fret';
             
@@ -213,10 +231,6 @@
                 fret.appendChild(string);
 
                 const note = isOpen ? strings[j] : getNoteOnFret(strings[j], label);
-                const key = document.getElementById('key-select').value;
-                const scaleType = document.getElementById('scale-type-select').value;
-                const scale = getScale(key, scaleType);
-                
                 if (scale.includes(note)) {
                     const noteElement = document.createElement('div');
                     noteElement.className = `note ${isOpen ? 'open-note' : ''}`;
@@ -264,11 +278,14 @@
             return allNotes[(startIndex + parseInt(fret)) % 12];
         }
 
-        document.getElementById('key-select').addEventListener('change', updateFretboard);
-        document.getElementById('scale-type-select').addEventListener('change', updateFretboard);
+        document.getElementById('key-select1').addEventListener('change', () => updateFretboard('fretboard1', 'key-select1', 'scale-type-select1'));
+        document.getElementById('scale-type-select1').addEventListener('change', () => updateFretboard('fretboard1', 'key-select1', 'scale-type-select1'));
+        document.getElementById('key-select2').addEventListener('change', () => updateFretboard('fretboard2', 'key-select2', 'scale-type-select2'));
+        document.getElementById('scale-type-select2').addEventListener('change', () => updateFretboard('fretboard2', 'key-select2', 'scale-type-select2'));
 
-        // Initialize fretboard with the default key and scale
-        updateFretboard();
+        // Initialize both fretboards with the default key and scale
+        updateFretboard('fretboard1', 'key-select1', 'scale-type-select1');
+        updateFretboard('fretboard2', 'key-select2', 'scale-type-select2');
     </script>
 </body>
 </html>

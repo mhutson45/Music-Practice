@@ -106,6 +106,9 @@
     <div class="fretboard-container">
         <div id="fretboard" class="fretboard"></div>
     </div>
+    <div class="fretboard-container">
+        <div id="fretboard2" class="fretboard"></div>
+    </div>
     <div id="scale-display" class="scale-display"></div>
 
     <script>
@@ -178,6 +181,25 @@
             }
 
             updateScaleDisplay(scale, scaleType);
+            updateFretboard2(); // Update the second fretboard as well
+        }
+
+        function updateFretboard2() {
+            const key = document.getElementById('key-select').value;
+            const scaleType = document.getElementById('scale-type-select').value;
+            const scale = getScale(key, scaleType);
+            const fretboard2 = document.getElementById('fretboard2');
+            fretboard2.innerHTML = '';
+
+            // Create open string column
+            const openStringColumn2 = createFret('Open', true);
+            fretboard2.appendChild(openStringColumn2);
+
+            // Create fretted columns
+            for (let i = 1; i <= frets; i++) {
+                const fret = createFret(i);
+                fretboard2.appendChild(fret);
+            }
         }
 
         function createFret(label, isOpen = false) {

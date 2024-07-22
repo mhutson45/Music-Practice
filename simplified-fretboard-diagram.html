@@ -101,6 +101,8 @@
             <option value="maj7b5">Maj7b5 Arpeggio</option>
             <option value="dom7sharp5">Dom7#5 Arpeggio</option>
             <option value="dom7b5">Dom7b5 Arpeggio</option>
+            <option value="major_triad">Major Triad</option>
+            <option value="minor_triad">Minor Triad</option>
         </select>
     </div>
     <div class="fretboard-container">
@@ -141,6 +143,8 @@
             <option value="maj7b5">Maj7b5 Arpeggio</option>
             <option value="dom7sharp5">Dom7#5 Arpeggio</option>
             <option value="dom7b5">Dom7b5 Arpeggio</option>
+            <option value="major_triad">Major Triad</option>
+            <option value="minor_triad">Minor Triad</option>
         </select>
     </div>
     <div class="fretboard-container">
@@ -172,7 +176,9 @@
                 dim: [0, 3, 6, 9],
                 maj7b5: [0, 4, 6, 11],
                 dom7sharp5: [0, 4, 8, 10],
-                dom7b5: [0, 4, 6, 10]
+                dom7b5: [0, 4, 6, 10],
+                major_triad: [0, 4, 7],
+                minor_triad: [0, 3, 7]
             };
             return intervals[type].map(interval => allNotes[(keyIndex + interval) % 12]);
         }
@@ -195,7 +201,9 @@
                 dim: ['1', 'b3', 'b5', 'bb7'],
                 maj7b5: ['1', '3', 'b5', '7'],
                 dom7sharp5: ['1', '3', '#5', 'b7'],
-                dom7b5: ['1', '3', 'b5', 'b7']
+                dom7b5: ['1', '3', 'b5', 'b7'],
+                major_triad: ['1', '3', '5'],
+                minor_triad: ['1', 'b3', '5']
             };
             return intervalNames[scaleType][index];
         }

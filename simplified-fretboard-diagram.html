@@ -45,6 +45,8 @@
         select, button { margin-right: 10px; padding: 5px; }
         .tuning-controls { display: flex; justify-content: space-between; margin-bottom: 10px; }
         .string-tuning { width: 50px; }
+        .tuning-label { font-weight: bold; margin-bottom: 5px; }
+        .string-label { font-size: 12px; margin-bottom: 2px; }
         
         /* Interval colors */
         .interval-1 { background-color: #ff6666; }
@@ -66,86 +68,22 @@
     <h1>Customizable Fretboard Diagram</h1>
     <div class="controls">
         <label for="key-select1">Select Key (Fretboard 1):</label>
-        <select id="key-select1">
-            <option value="C">C</option>
-            <option value="C#">C#</option>
-            <option value="D">D</option>
-            <option value="D#">D#</option>
-            <option value="E">E</option>
-            <option value="F">F</option>
-            <option value="F#">F#</option>
-            <option value="G">G</option>
-            <option value="G#">G#</option>
-            <option value="A">A</option>
-            <option value="A#">A#</option>
-            <option value="B">B</option>
-        </select>
+        <select id="key-select1"></select>
         <label for="scale-type-select1">Select Scale/Arpeggio (Fretboard 1):</label>
-        <select id="scale-type-select1">
-            <option value="major">Major Scale</option>
-            <option value="minor">Natural Minor Scale</option>
-            <option value="harmonic_minor">Harmonic Minor Scale</option>
-            <option value="melodic_minor">Melodic Minor Scale</option>
-            <option value="major_pentatonic">Major Pentatonic Scale</option>
-            <option value="minor_pentatonic">Minor Pentatonic Scale</option>
-            <option value="blues">Blues Scale</option>
-            <option value="major7">Major 7 Arpeggio</option>
-            <option value="minor7">Minor 7 Arpeggio</option>
-            <option value="dominant7">Dominant 7 Arpeggio</option>
-            <option value="min7b5">Min7b5 Arpeggio</option>
-            <option value="minMaj7">MinMaj7 Arpeggio</option>
-            <option value="maj7sharp5">Maj7#5 Arpeggio</option>
-            <option value="dim">Dim Arpeggio</option>
-            <option value="maj7b5">Maj7b5 Arpeggio</option>
-            <option value="dom7sharp5">Dom7#5 Arpeggio</option>
-            <option value="dom7b5">Dom7b5 Arpeggio</option>
-            <option value="major_triad">Major Triad</option>
-            <option value="minor_triad">Minor Triad</option>
-        </select>
+        <select id="scale-type-select1"></select>
     </div>
+    <div class="tuning-label">Tuning:</div>
     <div id="tuning-controls1" class="tuning-controls"></div>
     <div class="fretboard-container">
         <div id="fretboard1" class="fretboard"></div>
     </div>
     <div class="controls">
         <label for="key-select2">Select Key (Fretboard 2):</label>
-        <select id="key-select2">
-            <option value="C">C</option>
-            <option value="C#">C#</option>
-            <option value="D">D</option>
-            <option value="D#">D#</option>
-            <option value="E">E</option>
-            <option value="F">F</option>
-            <option value="F#">F#</option>
-            <option value="G">G</option>
-            <option value="G#">G#</option>
-            <option value="A">A</option>
-            <option value="A#">A#</option>
-            <option value="B">B</option>
-        </select>
+        <select id="key-select2"></select>
         <label for="scale-type-select2">Select Scale/Arpeggio (Fretboard 2):</label>
-        <select id="scale-type-select2">
-            <option value="major">Major Scale</option>
-            <option value="minor">Natural Minor Scale</option>
-            <option value="harmonic_minor">Harmonic Minor Scale</option>
-            <option value="melodic_minor">Melodic Minor Scale</option>
-            <option value="major_pentatonic">Major Pentatonic Scale</option>
-            <option value="minor_pentatonic">Minor Pentatonic Scale</option>
-            <option value="blues">Blues Scale</option>
-            <option value="major7">Major 7 Arpeggio</option>
-            <option value="minor7">Minor 7 Arpeggio</option>
-            <option value="dominant7">Dominant 7 Arpeggio</option>
-            <option value="min7b5">Min7b5 Arpeggio</option>
-            <option value="minMaj7">MinMaj7 Arpeggio</option>
-            <option value="maj7sharp5">Maj7#5 Arpeggio</option>
-            <option value="dim">Dim Arpeggio</option>
-            <option value="maj7b5">Maj7b5 Arpeggio</option>
-            <option value="dom7sharp5">Dom7#5 Arpeggio</option>
-            <option value="dom7b5">Dom7b5 Arpeggio</option>
-            <option value="major_triad">Major Triad</option>
-            <option value="minor_triad">Minor Triad</option>
-        </select>
+        <select id="scale-type-select2"></select>
     </div>
+    <div class="tuning-label">Tuning:</div>
     <div id="tuning-controls2" class="tuning-controls"></div>
     <div class="fretboard-container">
         <div id="fretboard2" class="fretboard"></div>
@@ -182,69 +120,123 @@
         };
 
         const defaultTuning = ["E", "A", "D", "G", "B", "E"];
+        const stringLabels = ["Low E", "A", "D", "G", "B", "High E"];
         let currentTunings = [defaultTuning.slice(), defaultTuning.slice()];
 
+        function initializeSelects() {
+            const keySelects = [document.getElementById('key-select1'), document.getElementById('key-select2')];
+            const scaleSelects = [document.getElementById('scale-type-select1'), document.getElementById('scale-type-select2')];
+
+            keySelects.forEach(select => {
+                notes.forEach(note => {
+                    const option = document.createElement('option');
+                    option.value = note;
+                    option.textContent = note;
+                    select.appendChild(option);
+                });
+            });
+
+            scaleSelects.forEach(select => {
+                Object.keys(scales).forEach(scale => {
+                    const option = document.createElement('option');
+                    option.value = scale;
+                    option.textContent = scale.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                    select.appendChild(option);
+                });
+            });
+        }
+
+        function renderTuningControls(controlsElement, tuningIndex) {
+            controlsElement.innerHTML = '';
+            currentTunings[tuningIndex].forEach((note, stringIndex) => {
+                const stringContainer = document.createElement('div');
+                
+                const label = document.createElement('div');
+                label.className = 'string-label';
+                label.textContent = stringLabels[stringIndex];
+                stringContainer.appendChild(label);
+
+                const select = document.createElement('select');
+                select.className = 'string-tuning';
+                notes.forEach(n => {
+                    const option = document.createElement('option');
+                    option.value = n;
+                    option.textContent = n;
+                    if (n === note) option.selected = true;
+                    select.appendChild(option);
+                });
+                select.addEventListener('change', (e) => {
+                    currentTunings[tuningIndex][stringIndex] = e.target.value;
+                    updateFretboard(tuningIndex);
+                });
+                stringContainer.appendChild(select);
+                controlsElement.appendChild(stringContainer);
+            });
+        }
+
+        function updateFretboard(boardIndex) {
+            const keySelect = document.getElementById(`key-select${boardIndex + 1}`);
+            const scaleTypeSelect = document.getElementById(`scale-type-select${boardIndex + 1}`);
+            const fretboardElement = document.getElementById(`fretboard${boardIndex + 1}`);
+            const key = keySelect.value;
+            const scaleType = scaleTypeSelect.value;
+            const tuning = currentTunings[boardIndex];
+
+            const rootNoteIndex = notes.indexOf(key);
+            const scale = scales[scaleType];
+            const noteSet = new Set(scale.map(interval => (rootNoteIndex + intervals[interval]) % 12));
+
+            fretboardElement.innerHTML = '';
+            for (let i = 0; i < 22; i++) {
+                const fretDiv = document.createElement('div');
+                fretDiv.className = 'fret';
+                tuning.forEach((stringNote, stringIndex) => {
+                    const stringNoteIndex = notes.indexOf(stringNote);
+                    const noteIndex = (stringNoteIndex + i) % 12;
+                    const noteName = notes[noteIndex];
+                    const isScaleNote = noteSet.has(noteIndex);
+                    const stringDiv = document.createElement('div');
+                    stringDiv.className = 'string';
+                    stringDiv.style.top = `${(stringIndex * 30) + 1}px`;
+                    if (isScaleNote) {
+                        const noteDiv = document.createElement('div');
+                        noteDiv.className = `note interval-${scale.findIndex(interval => (rootNoteIndex + intervals[interval]) % 12 === noteIndex) + 1}`;
+                        noteDiv.textContent = noteName;
+                        noteDiv.style.top = `${(stringIndex * 30) - 12}px`;
+                        fretDiv.appendChild(noteDiv);
+                    }
+                    fretDiv.appendChild(stringDiv);
+                });
+                const fretLabel = document.createElement('div');
+                fretLabel.className = 'fret-label';
+                fretLabel.textContent = i;
+                fretDiv.appendChild(fretLabel);
+                fretboardElement.appendChild(fretDiv);
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
+            initializeSelects();
+
             const keySelect1 = document.getElementById('key-select1');
             const scaleTypeSelect1 = document.getElementById('scale-type-select1');
-            const fretboard1 = document.getElementById('fretboard1');
             const tuningControls1 = document.getElementById('tuning-controls1');
 
             const keySelect2 = document.getElementById('key-select2');
             const scaleTypeSelect2 = document.getElementById('scale-type-select2');
-            const fretboard2 = document.getElementById('fretboard2');
             const tuningControls2 = document.getElementById('tuning-controls2');
 
-            const renderTuningControls = (controlsElement, tuningIndex) => {
-                controlsElement.innerHTML = '';
-                currentTunings[tuningIndex].forEach((note, stringIndex) => {
-                    const select = document.createElement('select');
-                    select.className = 'string-tuning';
-                    notes.forEach(n => {
-                        const option = document.createElement('option');
-                        option.value = n;
-                        option.textContent = n;
-                        if (n === note) option.selected = true;
-                        select.appendChild(option);
-                    });
-                    select.addEventListener('change', (e) => {
-                        currentTunings[tuningIndex][stringIndex] = e.target.value;
-                        updateFretboard(
-                            tuningIndex === 0 ? keySelect1.value : keySelect2.value,
-                            tuningIndex === 0 ? scaleTypeSelect1.value : scaleTypeSelect2.value,
-                            tuningIndex === 0 ? fretboard1 : fretboard2,
-                            currentTunings[tuningIndex]
-                        );
-                    });
-                    controlsElement.appendChild(select);
-                });
-            }
+            renderTuningControls(tuningControls1, 0);
+            renderTuningControls(tuningControls2, 1);
 
-            const updateFretboard = (key, scaleType, fretboardElement, tuning) => {
-                const rootNoteIndex = notes.indexOf(key);
-                const scale = scales[scaleType];
-                const noteSet = new Set(scale.map(interval => (rootNoteIndex + intervals[interval]) % 12));
+            keySelect1.addEventListener('change', () => updateFretboard(0));
+            scaleTypeSelect1.addEventListener('change', () => updateFretboard(0));
+            keySelect2.addEventListener('change', () => updateFretboard(1));
+            scaleTypeSelect2.addEventListener('change', () => updateFretboard(1));
 
-                fretboardElement.innerHTML = '';
-                for (let i = 0; i < 22; i++) {
-                    const fretDiv = document.createElement('div');
-                    fretDiv.className = 'fret';
-                    tuning.forEach((stringNote, stringIndex) => {
-                        const stringNoteIndex = notes.indexOf(stringNote);
-                        const noteIndex = (stringNoteIndex + i) % 12;
-                        const noteName = notes[noteIndex];
-                        const isScaleNote = noteSet.has(noteIndex);
-                        const stringDiv = document.createElement('div');
-                        stringDiv.className = 'string';
-                        stringDiv.style.top = `${(stringIndex * 30) + 1}px`;
-                        if (isScaleNote) {
-                            const noteDiv = document.createElement('div');
-                            noteDiv.className = `note interval-${scale.findIndex(interval => (rootNoteIndex + intervals[interval]) % 12 === noteIndex) + 1}`;
-                            noteDiv.textContent = noteName;
-                            noteDiv.style.top = `${(stringIndex * 30) - 12}px`;
-                            fretDiv.appendChild(noteDiv);
-                        }
-                        fretDiv.appendChild(stringDiv);
-                    });
-                    const fretLabel = document.createElement('div');
-                    fret
+            updateFretboard(0);
+            updateFretboard(1);
+        });
+    </script>
+</body>
+</html>

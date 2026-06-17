@@ -62,15 +62,54 @@
         .interval-b7 { background-color: #b379fe; }
         .interval-#5 { background-color: #ff66cc; }
         .interval-bb7 { background-color: #ff6699; }
+
+        /* Chord-tone ring (kept visible on top of the full scale) */
+        .note.chord-tone {
+            box-shadow: 0 0 0 3px #111, 0 0 6px 2px rgba(0,0,0,0.4);
+            z-index: 3;
+        }
+        /* Next-bar chord tones: dashed blue outline so you can see where you're heading */
+        .note.chord-tone-next {
+            outline: 2px dashed #1565ff;
+            outline-offset: 2px;
+            z-index: 2;
+        }
+
+        /* Capo bar drawn across the strings at the capo fret */
+        .capo-bar {
+            position: absolute; top: -6px; left: 50%; transform: translateX(-50%);
+            width: 10px; height: 172px; background: #6b4f2a; border-radius: 4px;
+            z-index: 0; box-shadow: 0 0 4px rgba(0,0,0,0.5);
+        }
+        .bar-cell.disabled { opacity: 0.35; }
+
+        /* Chord progression section */
+        .progression { margin-top: 40px; border-top: 2px solid #333; padding-top: 20px; }
+        .transport { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+        .transport input[type="number"] { width: 70px; }
+        .now-playing { font-weight: bold; min-width: 220px; }
+        .bars-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; max-width: 760px; }
+        .bar-cell {
+            border: 1px solid #ccc; border-radius: 6px; padding: 6px;
+            display: flex; flex-direction: column; gap: 4px;
+        }
+        .bar-cell.active { border-color: #111; background: #fff4d6; box-shadow: 0 0 0 2px #111; }
+        .bar-cell .bar-num { font-size: 11px; color: #666; }
+        .bar-cell select { margin-right: 0; width: 100%; }
     </style>
 </head>
 <body>
     <h1>Customizable Fretboard Diagram</h1>
     <div class="controls">
+        <label><input type="checkbox" id="show-intervals"> Show scale intervals (instead of note names)</label>
+    </div>
+    <div class="controls">
         <label for="key-select1">Select Key (Fretboard 1):</label>
         <select id="key-select1"></select>
         <label for="scale-type-select1">Select Scale/Arpeggio (Fretboard 1):</label>
         <select id="scale-type-select1"></select>
+        <label for="capo-select1">Capo:</label>
+        <select id="capo-select1" class="capo-select"></select>
     </div>
     <div class="tuning-label">Tuning:</div>
     <div id="tuning-controls1" class="tuning-controls"></div>
@@ -82,11 +121,33 @@
         <select id="key-select2"></select>
         <label for="scale-type-select2">Select Scale/Arpeggio (Fretboard 2):</label>
         <select id="scale-type-select2"></select>
+        <label for="capo-select2">Capo:</label>
+        <select id="capo-select2" class="capo-select"></select>
     </div>
     <div class="tuning-label">Tuning:</div>
     <div id="tuning-controls2" class="tuning-controls"></div>
     <div class="fretboard-container">
         <div id="fretboard2" class="fretboard"></div>
+    </div>
+
+    <div class="progression">
+        <h2>16-Bar Chord Progression</h2>
+        <p>Build a progression below. Pressing Play loops it with a metronome and rings the chord tones on <strong>Fretboard 2</strong> (the full scale stays visible).</p>
+        <div class="transport">
+            <button id="play-btn">▶ Play</button>
+            <label>BPM <input type="number" id="bpm" value="100" min="30" max="300"></label>
+            <label>Beats/bar <input type="number" id="beats-per-bar" value="4" min="1" max="12"></label>
+            <label>Loop length
+                <select id="loop-length">
+                    <option value="4">4 bars</option>
+                    <option value="8">8 bars</option>
+                    <option value="16" selected>16 bars</option>
+                </select>
+            </label>
+            <label><input type="checkbox" id="metronome-on" checked> Metronome</label>
+            <span class="now-playing" id="now-playing">Stopped</span>
+        </div>
+        <div class="bars-grid" id="bars-grid"></div>
     </div>
 
     <script>
@@ -105,6 +166,7 @@
             major_pentatonic: ["1", "2", "3", "5", "6"],
             minor_pentatonic: ["1", "b3", "4", "5", "b7"],
             blues: ["1", "b3", "4", "b5", "5", "b7"],
+            bluegrass: ["1", "2", "b3", "3", "b5", "5", "6"],
             major7: ["1", "3", "5", "7"],
             minor7: ["1", "b3", "5", "b7"],
             dominant7: ["1", "3", "5", "b7"],
@@ -122,6 +184,41 @@
         const defaultTuning = ["E", "B", "G", "D", "A", "E"];
         const stringLabels = ["High E", "B", "G", "D", "A", "Low E"];
         let currentTunings = [defaultTuning.slice(), defaultTuning.slice()];
+
+        let showIntervals = false;
+        let activeChordPCs = null; // Set of pitch classes (0-11) for the current chord, or null
+        let nextChordPCs = null;   // Set of pitch classes for the upcoming chord, or null
+        let capos = [0, 0];        // capo fret per fretboard
+
+        // Chord qualities -> semitone offsets from the chord root
+        const chordQualities = {
+            maj:   [0, 4, 7],
+            min:   [0, 3, 7],
+            dim:   [0, 3, 6],
+            aug:   [0, 4, 8],
+            sus4:  [0, 5, 7],
+            "6":   [0, 4, 7, 9],
+            m6:    [0, 3, 7, 9],
+            maj7:  [0, 4, 7, 11],
+            "7":   [0, 4, 7, 10],
+            m7:    [0, 3, 7, 10],
+            m7b5:  [0, 3, 6, 10],
+            dim7:  [0, 3, 6, 9]
+        };
+
+        // Default 16-bar progression (A blues-style I–IV–V using dominant 7ths)
+        const defaultProgression = [
+            { root: "A", quality: "7" }, { root: "A", quality: "7" }, { root: "A", quality: "7" }, { root: "A", quality: "7" },
+            { root: "D", quality: "7" }, { root: "D", quality: "7" }, { root: "A", quality: "7" }, { root: "A", quality: "7" },
+            { root: "E", quality: "7" }, { root: "D", quality: "7" }, { root: "A", quality: "7" }, { root: "A", quality: "7" },
+            { root: "A", quality: "7" }, { root: "D", quality: "7" }, { root: "E", quality: "7" }, { root: "E", quality: "7" }
+        ];
+        let progression = defaultProgression.map(c => ({ ...c }));
+
+        function chordPitchClasses(bar) {
+            const rootIdx = notes.indexOf(bar.root);
+            return new Set(chordQualities[bar.quality].map(s => (rootIdx + s) % 12));
+        }
 
         function initializeSelects() {
             const keySelects = [document.getElementById('key-select1'), document.getElementById('key-select2')];
@@ -143,6 +240,16 @@
                     option.textContent = scale.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
                     select.appendChild(option);
                 });
+            });
+
+            const capoSelects = [document.getElementById('capo-select1'), document.getElementById('capo-select2')];
+            capoSelects.forEach(select => {
+                for (let f = 0; f <= 12; f++) {
+                    const option = document.createElement('option');
+                    option.value = f;
+                    option.textContent = f === 0 ? 'None' : f;
+                    select.appendChild(option);
+                }
             });
         }
 
@@ -185,24 +292,37 @@
             const rootNoteIndex = notes.indexOf(key);
             const scale = scales[scaleType];
             const noteSet = new Set(scale.map(interval => (rootNoteIndex + intervals[interval]) % 12));
+            const capo = capos[boardIndex];
 
             fretboardElement.innerHTML = '';
             for (let i = 0; i < 22; i++) {
                 const fretDiv = document.createElement('div');
                 fretDiv.className = 'fret';
+                if (capo > 0 && i === capo) {
+                    const capoBar = document.createElement('div');
+                    capoBar.className = 'capo-bar';
+                    fretDiv.appendChild(capoBar);
+                }
                 tuning.forEach((stringNote, stringIndex) => {
                     const stringNoteIndex = notes.indexOf(stringNote);
                     const noteIndex = (stringNoteIndex + i) % 12;
                     const noteName = notes[noteIndex];
-                    const isScaleNote = noteSet.has(noteIndex);
+                    // Notes behind the capo can't be played, so don't show them
+                    const isScaleNote = noteSet.has(noteIndex) && i >= capo;
                     const stringDiv = document.createElement('div');
                     stringDiv.className = 'string';
                     stringDiv.style.top = `${(stringIndex * 30) + 1}px`;
                     if (isScaleNote) {
+                        const scaleIdx = scale.findIndex(interval => (rootNoteIndex + intervals[interval]) % 12 === noteIndex);
                         const noteDiv = document.createElement('div');
-                        noteDiv.className = `note interval-${scale.findIndex(interval => (rootNoteIndex + intervals[interval]) % 12 === noteIndex) + 1}`;
-                        noteDiv.textContent = noteName;
+                        noteDiv.className = `note interval-${scaleIdx + 1}`;
+                        noteDiv.textContent = showIntervals ? scale[scaleIdx] : noteName;
                         noteDiv.style.top = `${(stringIndex * 30) - 12}px`;
+                        if (boardIndex === 1 && activeChordPCs && activeChordPCs.has(noteIndex)) {
+                            noteDiv.classList.add('chord-tone');
+                        } else if (boardIndex === 1 && nextChordPCs && nextChordPCs.has(noteIndex)) {
+                            noteDiv.classList.add('chord-tone-next');
+                        }
                         fretDiv.appendChild(noteDiv);
                     }
                     fretDiv.appendChild(stringDiv);
@@ -213,6 +333,141 @@
                 fretDiv.appendChild(fretLabel);
                 fretboardElement.appendChild(fretDiv);
             }
+        }
+
+        function renderBarsGrid() {
+            const grid = document.getElementById('bars-grid');
+            grid.innerHTML = '';
+            progression.forEach((bar, i) => {
+                const cell = document.createElement('div');
+                cell.className = 'bar-cell';
+                cell.id = `bar-cell-${i}`;
+
+                const num = document.createElement('div');
+                num.className = 'bar-num';
+                num.textContent = `Bar ${i + 1}`;
+                cell.appendChild(num);
+
+                const rootSel = document.createElement('select');
+                notes.forEach(n => {
+                    const o = document.createElement('option');
+                    o.value = n; o.textContent = n;
+                    if (n === bar.root) o.selected = true;
+                    rootSel.appendChild(o);
+                });
+                rootSel.addEventListener('change', e => { progression[i].root = e.target.value; });
+                cell.appendChild(rootSel);
+
+                const qualSel = document.createElement('select');
+                Object.keys(chordQualities).forEach(q => {
+                    const o = document.createElement('option');
+                    o.value = q; o.textContent = q;
+                    if (q === bar.quality) o.selected = true;
+                    qualSel.appendChild(o);
+                });
+                qualSel.addEventListener('change', e => { progression[i].quality = e.target.value; });
+                cell.appendChild(qualSel);
+
+                grid.appendChild(cell);
+            });
+        }
+
+        // ---- Playback / metronome engine ----
+        let audioCtx = null;
+        let isPlaying = false;
+        let schedulerTimer = null;
+        let currentBar = 0;
+        let currentBeat = 0;
+        let nextNoteTime = 0;
+        const LOOKAHEAD = 0.1; // seconds to schedule ahead
+
+        function getBpm() {
+            return Math.min(300, Math.max(30, parseInt(document.getElementById('bpm').value, 10) || 100));
+        }
+        function getBeatsPerBar() {
+            return Math.min(12, Math.max(1, parseInt(document.getElementById('beats-per-bar').value, 10) || 4));
+        }
+        function getLoopLength() {
+            return parseInt(document.getElementById('loop-length').value, 10) || 16;
+        }
+
+        function refreshBarGridState() {
+            const loopLen = getLoopLength();
+            progression.forEach((bar, i) => {
+                const cell = document.getElementById(`bar-cell-${i}`);
+                if (cell) cell.classList.toggle('disabled', i >= loopLen);
+            });
+        }
+
+        function scheduleClick(time, accent) {
+            if (!document.getElementById('metronome-on').checked) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.frequency.value = accent ? 1500 : 1000;
+            gain.gain.setValueAtTime(0.0001, time);
+            gain.gain.exponentialRampToValueAtTime(accent ? 0.6 : 0.35, time + 0.001);
+            gain.gain.exponentialRampToValueAtTime(0.0001, time + 0.05);
+            osc.connect(gain).connect(audioCtx.destination);
+            osc.start(time);
+            osc.stop(time + 0.06);
+        }
+
+        function highlightBar(barIndex) {
+            const loopLen = getLoopLength();
+            const nextIndex = (barIndex + 1) % loopLen;
+            activeChordPCs = chordPitchClasses(progression[barIndex]);
+            nextChordPCs = chordPitchClasses(progression[nextIndex]);
+            updateFretboard(1);
+            document.querySelectorAll('.bar-cell.active').forEach(el => el.classList.remove('active'));
+            const cell = document.getElementById(`bar-cell-${barIndex}`);
+            if (cell) cell.classList.add('active');
+            const c = progression[barIndex], n = progression[nextIndex];
+            document.getElementById('now-playing').textContent =
+                `Bar ${barIndex + 1} / ${loopLen} — ${c.root}${c.quality}  →  next: ${n.root}${n.quality}`;
+        }
+
+        function scheduler() {
+            const beatsPerBar = getBeatsPerBar();
+            while (nextNoteTime < audioCtx.currentTime + LOOKAHEAD) {
+                scheduleClick(nextNoteTime, currentBeat === 0);
+                if (currentBeat === 0) {
+                    const barToShow = currentBar;
+                    const delayMs = Math.max(0, (nextNoteTime - audioCtx.currentTime) * 1000);
+                    setTimeout(() => { if (isPlaying) highlightBar(barToShow); }, delayMs);
+                }
+                // advance
+                const secondsPerBeat = 60.0 / getBpm();
+                nextNoteTime += secondsPerBeat;
+                currentBeat++;
+                if (currentBeat >= beatsPerBar) {
+                    currentBeat = 0;
+                    currentBar = (currentBar + 1) % getLoopLength();
+                }
+            }
+            schedulerTimer = setTimeout(scheduler, 25);
+        }
+
+        function startPlayback() {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            isPlaying = true;
+            currentBar = 0;
+            currentBeat = 0;
+            nextNoteTime = audioCtx.currentTime + 0.05;
+            document.getElementById('play-btn').textContent = '■ Stop';
+            scheduler();
+        }
+
+        function stopPlayback() {
+            isPlaying = false;
+            if (schedulerTimer) clearTimeout(schedulerTimer);
+            schedulerTimer = null;
+            activeChordPCs = null;
+            nextChordPCs = null;
+            updateFretboard(1);
+            document.querySelectorAll('.bar-cell.active').forEach(el => el.classList.remove('active'));
+            document.getElementById('play-btn').textContent = '▶ Play';
+            document.getElementById('now-playing').textContent = 'Stopped';
         }
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -233,6 +488,28 @@
             scaleTypeSelect1.addEventListener('change', () => updateFretboard(0));
             keySelect2.addEventListener('change', () => updateFretboard(1));
             scaleTypeSelect2.addEventListener('change', () => updateFretboard(1));
+
+            document.getElementById('show-intervals').addEventListener('change', e => {
+                showIntervals = e.target.checked;
+                updateFretboard(0);
+                updateFretboard(1);
+            });
+
+            document.getElementById('capo-select1').addEventListener('change', e => {
+                capos[0] = parseInt(e.target.value, 10);
+                updateFretboard(0);
+            });
+            document.getElementById('capo-select2').addEventListener('change', e => {
+                capos[1] = parseInt(e.target.value, 10);
+                updateFretboard(1);
+            });
+
+            renderBarsGrid();
+            refreshBarGridState();
+            document.getElementById('loop-length').addEventListener('change', refreshBarGridState);
+            document.getElementById('play-btn').addEventListener('click', () => {
+                if (isPlaying) stopPlayback(); else startPlayback();
+            });
 
             updateFretboard(0);
             updateFretboard(1);

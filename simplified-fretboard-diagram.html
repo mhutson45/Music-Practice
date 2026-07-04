@@ -121,46 +121,37 @@
 <body>
     <h1>Customizable Fretboard Diagram</h1>
     <div class="controls">
-        <label><input type="checkbox" id="show-intervals"> Show scale intervals (instead of note names)</label>
-    </div>
-    <div class="controls">
-        <label for="key-select1">Select Key (Fretboard 1):</label>
-        <select id="key-select1"></select>
-        <label for="scale-type-select1">Select Scale (Fretboard 1):</label>
-        <select id="scale-type-select1"></select>
-        <label for="capo-select1">Capo:</label>
-        <select id="capo-select1" class="capo-select"></select>
+        <label for="key-select">Select Key:</label>
+        <select id="key-select"></select>
+        <label for="scale-type-select">Select Scale:</label>
+        <select id="scale-type-select"></select>
+        <label for="capo-select">Capo:</label>
+        <select id="capo-select" class="capo-select"></select>
     </div>
     <div class="tuning-label">Tuning:</div>
     <div class="tuning-preset-row">
-        <select id="tuning-preset1" class="tuning-preset"></select>
+        <select id="tuning-preset" class="tuning-preset"></select>
     </div>
-    <div id="tuning-controls1" class="tuning-controls hidden"></div>
-    <div class="chord-buttons-row">
+    <div id="tuning-controls" class="tuning-controls hidden"></div>
+
+    <h2>Fretboard 1</h2>
+    <div class="controls">
+        <label><input type="checkbox" id="show-intervals1"> Show scale intervals (instead of note names)</label>
         <label for="chord-override1">Chord Type:</label>
         <select id="chord-override1"></select>
+    </div>
+    <div class="chord-buttons-row">
         <div id="chord-buttons1" class="chord-buttons"></div>
     </div>
     <div class="fretboard-container">
         <div id="fretboard1" class="fretboard"></div>
     </div>
+
+    <h2>Fretboard 2</h2>
     <div class="controls">
-        <label for="key-select2">Select Key (Fretboard 2):</label>
-        <select id="key-select2"></select>
-        <label for="scale-type-select2">Select Scale (Fretboard 2):</label>
-        <select id="scale-type-select2"></select>
-        <label for="capo-select2">Capo:</label>
-        <select id="capo-select2" class="capo-select"></select>
-    </div>
-    <div class="tuning-label">Tuning:</div>
-    <div class="tuning-preset-row">
-        <select id="tuning-preset2" class="tuning-preset"></select>
-    </div>
-    <div id="tuning-controls2" class="tuning-controls hidden"></div>
-    <div class="chord-buttons-row">
+        <label><input type="checkbox" id="show-intervals2"> Show scale intervals (instead of note names)</label>
         <label for="chord-override2">Chord Type:</label>
         <select id="chord-override2"></select>
-        <div id="chord-buttons2" class="chord-buttons"></div>
     </div>
     <div class="fretboard-container">
         <div id="fretboard2" class="fretboard"></div>
@@ -352,11 +343,11 @@
 
         const defaultTuning = ["E", "B", "G", "D", "A", "E"];
         const stringLabels = ["High E", "B", "G", "D", "A", "Low E"];
-        let currentTunings = [defaultTuning.slice(), defaultTuning.slice()];
+        let currentTuning = defaultTuning.slice();
 
         // Most common 6-string guitar tunings, ordered most -> least common.
         // Notes given low string to high string (standard notation), reversed to
-        // high-to-low when applied since that's how currentTunings is stored.
+        // high-to-low when applied since that's how currentTuning is stored.
         const tuningPresets = [
             { name: "Standard", notesLowToHigh: ["E", "A", "D", "G", "B", "E"] },
             { name: "Drop D", notesLowToHigh: ["D", "A", "D", "G", "B", "E"] },
@@ -373,13 +364,16 @@
             { name: "Custom", notesLowToHigh: null }
         ];
 
-        let showIntervals = false;
+        let showIntervalsPerBoard = [false, false]; // "show intervals" toggle, independent per fretboard
         let activeChordPCs = null; // Set of pitch classes (0-11) for the current chord, or null
         let nextChordPCs = null;   // Set of pitch classes for the upcoming chord, or null
-        let capos = [0, 0];        // capo fret per fretboard
-        let chordButtonPCs = [null, null];   // ringed pitch classes from a clicked diatonic chord button, per fretboard
-        let chordButtonActive = [null, null]; // active degree index per fretboard, or null
-        let chordOverride = ['auto', 'auto'];  // chord-type override key per fretboard, or 'auto'
+        let currentPreviewBarIndex = null; // bar index currently shown on Fretboard 2, or null
+        let capo = 0;              // capo fret, shared by both fretboards
+        let chordButtonPCs = [null, null];   // ringed pitch classes from a clicked diatonic chord button (Fretboard 1 only)
+        let chordButtonActive = [null, null]; // active degree index (Fretboard 1 only), or null
+        // Chord-type override per fretboard: board 0 overrides the clicked chord-button's
+        // quality; board 1 overrides the quality used to ring the progression's chords.
+        let chordOverride = ['auto', 'auto'];
 
         // Default 16-bar progression (A blues-style I–IV–V using dominant 7ths)
         const defaultProgression = [
@@ -390,9 +384,14 @@
         ];
         let progression = defaultProgression.map(c => ({ ...c }));
 
+        // Fretboard 2's "Chord Type" override lets you re-voice every bar in the
+        // progression as a different quality (e.g. preview it with everything as a 9th)
+        // while keeping each bar's own root.
         function chordPitchClasses(bar) {
             const rootIdx = notes.indexOf(bar.root);
-            return new Set(chordQualities[bar.quality].map(s => (rootIdx + s) % 12));
+            const override = chordOverride[1];
+            const quality = (override !== 'auto' && chordQualities[override]) ? override : bar.quality;
+            return new Set(chordQualities[quality].map(s => (rootIdx + s) % 12));
         }
 
         // Matches a set of semitone offsets (relative to a root, must include 0) against
@@ -441,16 +440,15 @@
             return new Set(chordQualities[qualityKey].map(s => (rootIdx + s) % 12));
         }
 
-        function renderChordButtons(boardIndex) {
-            const keySelect = document.getElementById(`key-select${boardIndex + 1}`);
-            const scaleTypeSelect = document.getElementById(`scale-type-select${boardIndex + 1}`);
-            const container = document.getElementById(`chord-buttons${boardIndex + 1}`);
-            const rootNoteIndex = notes.indexOf(keySelect.value);
-            const scale = scales[scaleTypeSelect.value];
+        // Diatonic chord buttons live only on Fretboard 1 (index 0).
+        function renderChordButtons() {
+            const rootNoteIndex = notes.indexOf(document.getElementById('key-select').value);
+            const scale = scales[document.getElementById('scale-type-select').value];
+            const container = document.getElementById('chord-buttons1');
 
             container.innerHTML = '';
-            chordButtonActive[boardIndex] = null;
-            chordButtonPCs[boardIndex] = null;
+            chordButtonActive[0] = null;
+            chordButtonPCs[0] = null;
 
             if (scale.length !== 7) {
                 const msg = document.createElement('span');
@@ -466,27 +464,25 @@
                 btn.type = 'button';
                 btn.textContent = chord.label;
                 btn.dataset.degree = degreeIndex;
-                btn.addEventListener('click', () => selectChordButton(boardIndex, degreeIndex));
+                btn.addEventListener('click', () => selectChordButton(degreeIndex));
                 container.appendChild(btn);
             });
         }
 
-        function selectChordButton(boardIndex, degreeIndex) {
-            const keySelect = document.getElementById(`key-select${boardIndex + 1}`);
-            const scaleTypeSelect = document.getElementById(`scale-type-select${boardIndex + 1}`);
-            const rootNoteIndex = notes.indexOf(keySelect.value);
-            const scale = scales[scaleTypeSelect.value];
+        function selectChordButton(degreeIndex) {
+            const rootNoteIndex = notes.indexOf(document.getElementById('key-select').value);
+            const scale = scales[document.getElementById('scale-type-select').value];
             const chord = computeDiatonicChord(rootNoteIndex, scale, degreeIndex);
 
-            const override = chordOverride[boardIndex];
+            const override = chordOverride[0];
             const qualityKey = (override !== 'auto' && chordQualities[override]) ? override : chord.qualityKey;
-            chordButtonPCs[boardIndex] = qualityKey ? chordPCsForRootAndQuality(chord.rootName, qualityKey) : chord.pcs;
-            chordButtonActive[boardIndex] = degreeIndex;
+            chordButtonPCs[0] = qualityKey ? chordPCsForRootAndQuality(chord.rootName, qualityKey) : chord.pcs;
+            chordButtonActive[0] = degreeIndex;
 
-            document.querySelectorAll(`#chord-buttons${boardIndex + 1} button`).forEach(b => {
+            document.querySelectorAll('#chord-buttons1 button').forEach(b => {
                 b.classList.toggle('active', Number(b.dataset.degree) === degreeIndex);
             });
-            updateFretboard(boardIndex);
+            updateFretboard(0);
         }
 
         // Populates a <select> with <optgroup>s from chordTypeGroups. If includeAuto,
@@ -513,77 +509,69 @@
         }
 
         function initializeSelects() {
-            const keySelects = [document.getElementById('key-select1'), document.getElementById('key-select2')];
-            const scaleSelects = [document.getElementById('scale-type-select1'), document.getElementById('scale-type-select2')];
-
-            keySelects.forEach(select => {
-                notes.forEach(note => {
-                    const option = document.createElement('option');
-                    option.value = note;
-                    option.textContent = note;
-                    select.appendChild(option);
-                });
+            const keySelect = document.getElementById('key-select');
+            notes.forEach(note => {
+                const option = document.createElement('option');
+                option.value = note;
+                option.textContent = note;
+                keySelect.appendChild(option);
             });
 
-            scaleSelects.forEach(select => {
-                scaleGroups.forEach(group => {
-                    const optgroup = document.createElement('optgroup');
-                    optgroup.label = group.group;
-                    group.items.forEach(item => {
-                        const option = document.createElement('option');
-                        option.value = item.key;
-                        option.textContent = item.name;
-                        optgroup.appendChild(option);
-                    });
-                    select.appendChild(optgroup);
+            const scaleSelect = document.getElementById('scale-type-select');
+            scaleGroups.forEach(group => {
+                const optgroup = document.createElement('optgroup');
+                optgroup.label = group.group;
+                group.items.forEach(item => {
+                    const option = document.createElement('option');
+                    option.value = item.key;
+                    option.textContent = item.name;
+                    optgroup.appendChild(option);
                 });
+                scaleSelect.appendChild(optgroup);
             });
 
             const chordOverrideSelects = [document.getElementById('chord-override1'), document.getElementById('chord-override2')];
             chordOverrideSelects.forEach(select => populateChordTypeSelect(select, true));
 
-            const capoSelects = [document.getElementById('capo-select1'), document.getElementById('capo-select2')];
-            capoSelects.forEach(select => {
-                for (let f = 0; f <= 12; f++) {
-                    const option = document.createElement('option');
-                    option.value = f;
-                    option.textContent = f === 0 ? 'None' : f;
-                    select.appendChild(option);
-                }
-            });
+            const capoSelect = document.getElementById('capo-select');
+            for (let f = 0; f <= 12; f++) {
+                const option = document.createElement('option');
+                option.value = f;
+                option.textContent = f === 0 ? 'None' : f;
+                capoSelect.appendChild(option);
+            }
 
-            const tuningPresetSelects = [document.getElementById('tuning-preset1'), document.getElementById('tuning-preset2')];
-            tuningPresetSelects.forEach(select => {
-                tuningPresets.forEach((preset, i) => {
-                    const option = document.createElement('option');
-                    option.value = i;
-                    option.textContent = preset.notesLowToHigh
-                        ? `${preset.name} (${preset.notesLowToHigh.join(' ')})`
-                        : preset.name;
-                    select.appendChild(option);
-                });
+            const tuningPresetSelect = document.getElementById('tuning-preset');
+            tuningPresets.forEach((preset, i) => {
+                const option = document.createElement('option');
+                option.value = i;
+                option.textContent = preset.notesLowToHigh
+                    ? `${preset.name} (${preset.notesLowToHigh.join(' ')})`
+                    : preset.name;
+                tuningPresetSelect.appendChild(option);
             });
         }
 
-        function applyTuningPreset(tuningIndex, presetIndex) {
+        function applyTuningPreset(presetIndex) {
             const preset = tuningPresets[presetIndex];
-            const controlsElement = document.getElementById(`tuning-controls${tuningIndex + 1}`);
+            const controlsElement = document.getElementById('tuning-controls');
             if (!preset.notesLowToHigh) {
                 // "Custom" — reveal the per-string selects, keep current tuning as-is.
                 controlsElement.classList.remove('hidden');
                 return;
             }
             controlsElement.classList.add('hidden');
-            currentTunings[tuningIndex] = preset.notesLowToHigh.slice().reverse();
-            renderTuningControls(controlsElement, tuningIndex);
-            updateFretboard(tuningIndex);
+            currentTuning = preset.notesLowToHigh.slice().reverse();
+            renderTuningControls(controlsElement);
+            updateFretboard(0);
+            updateFretboard(1);
         }
 
-        function renderTuningControls(controlsElement, tuningIndex) {
+        function renderTuningControls(controlsElement) {
             controlsElement.innerHTML = '';
-            currentTunings[tuningIndex].forEach((note, stringIndex) => {
+            currentTuning.forEach((note, stringIndex) => {
                 const stringContainer = document.createElement('div');
-                
+
                 const label = document.createElement('div');
                 label.className = 'string-label';
                 label.textContent = stringLabels[stringIndex];
@@ -599,10 +587,10 @@
                     select.appendChild(option);
                 });
                 select.addEventListener('change', (e) => {
-                    currentTunings[tuningIndex][stringIndex] = e.target.value;
-                    const presetSelect = document.getElementById(`tuning-preset${tuningIndex + 1}`);
-                    presetSelect.value = tuningPresets.length - 1; // "Custom"
-                    updateFretboard(tuningIndex);
+                    currentTuning[stringIndex] = e.target.value;
+                    document.getElementById('tuning-preset').value = tuningPresets.length - 1; // "Custom"
+                    updateFretboard(0);
+                    updateFretboard(1);
                 });
                 stringContainer.appendChild(select);
                 controlsElement.appendChild(stringContainer);
@@ -610,17 +598,15 @@
         }
 
         function updateFretboard(boardIndex) {
-            const keySelect = document.getElementById(`key-select${boardIndex + 1}`);
-            const scaleTypeSelect = document.getElementById(`scale-type-select${boardIndex + 1}`);
             const fretboardElement = document.getElementById(`fretboard${boardIndex + 1}`);
-            const key = keySelect.value;
-            const scaleType = scaleTypeSelect.value;
-            const tuning = currentTunings[boardIndex];
+            const key = document.getElementById('key-select').value;
+            const scaleType = document.getElementById('scale-type-select').value;
+            const tuning = currentTuning;
+            const showIntervals = showIntervalsPerBoard[boardIndex];
 
             const rootNoteIndex = notes.indexOf(key);
             const scale = scales[scaleType];
             const noteSet = new Set(scale.map(interval => (rootNoteIndex + intervals[interval]) % 12));
-            const capo = capos[boardIndex];
             const chordPCs = chordButtonPCs[boardIndex];
 
             fretboardElement.innerHTML = '';
@@ -647,9 +633,12 @@
                         noteDiv.className = `note interval-${scaleIdx + 1}`;
                         noteDiv.textContent = showIntervals ? scale[scaleIdx] : noteName;
                         noteDiv.style.top = `${(stringIndex * 30) - 12}px`;
+                        // Both rings are applied independently (not else-if) so a note
+                        // shared by the current and next chord shows both at once.
                         if (boardIndex === 1 && activeChordPCs && activeChordPCs.has(noteIndex)) {
                             noteDiv.classList.add('chord-tone');
-                        } else if (boardIndex === 1 && nextChordPCs && nextChordPCs.has(noteIndex)) {
+                        }
+                        if (boardIndex === 1 && nextChordPCs && nextChordPCs.has(noteIndex)) {
                             noteDiv.classList.add('chord-tone-next');
                         }
                         if (chordPCs && chordPCs.has(noteIndex)) {
@@ -696,8 +685,10 @@
                 qualSel.addEventListener('change', e => { progression[i].quality = e.target.value; });
                 cell.appendChild(qualSel);
 
-                cell.addEventListener('click', e => {
-                    if (e.target.tagName === 'SELECT') return;
+                // Clicking anywhere in the cell (including on the selects, which fill
+                // most of it) previews the bar; picking a dropdown option still fires
+                // its own 'change' handler independently.
+                cell.addEventListener('click', () => {
                     highlightBar(i, { preview: !isPlaying });
                 });
 
@@ -748,6 +739,7 @@
         function highlightBar(barIndex, { preview = false } = {}) {
             const loopLen = getLoopLength();
             const nextIndex = (barIndex + 1) % loopLen;
+            currentPreviewBarIndex = barIndex;
             activeChordPCs = chordPitchClasses(progression[barIndex]);
             nextChordPCs = chordPitchClasses(progression[nextIndex]);
             updateFretboard(1);
@@ -798,6 +790,7 @@
             schedulerTimer = null;
             activeChordPCs = null;
             nextChordPCs = null;
+            currentPreviewBarIndex = null;
             updateFretboard(1);
             document.querySelectorAll('.bar-cell.active').forEach(el => el.classList.remove('active'));
             document.getElementById('play-btn').textContent = '▶ Play';
@@ -807,52 +800,46 @@
         document.addEventListener('DOMContentLoaded', () => {
             initializeSelects();
 
-            const keySelect1 = document.getElementById('key-select1');
-            const scaleTypeSelect1 = document.getElementById('scale-type-select1');
-            const tuningControls1 = document.getElementById('tuning-controls1');
+            const tuningControls = document.getElementById('tuning-controls');
+            renderTuningControls(tuningControls);
+            document.getElementById('tuning-preset').addEventListener('change', e => applyTuningPreset(Number(e.target.value)));
+            // Default to Standard tuning (index 0) and hide the per-string controls.
+            document.getElementById('tuning-preset').value = 0;
 
-            const keySelect2 = document.getElementById('key-select2');
-            const scaleTypeSelect2 = document.getElementById('scale-type-select2');
-            const tuningControls2 = document.getElementById('tuning-controls2');
+            renderChordButtons();
 
-            renderTuningControls(tuningControls1, 0);
-            renderTuningControls(tuningControls2, 1);
-
-            document.getElementById('tuning-preset1').addEventListener('change', e => applyTuningPreset(0, Number(e.target.value)));
-            document.getElementById('tuning-preset2').addEventListener('change', e => applyTuningPreset(1, Number(e.target.value)));
-            // Default both fretboards to Standard tuning (index 0) and hide per-string controls.
-            document.getElementById('tuning-preset1').value = 0;
-            document.getElementById('tuning-preset2').value = 0;
-
-            renderChordButtons(0);
-            renderChordButtons(1);
-
-            keySelect1.addEventListener('change', () => { renderChordButtons(0); updateFretboard(0); });
-            scaleTypeSelect1.addEventListener('change', () => { renderChordButtons(0); updateFretboard(0); });
-            keySelect2.addEventListener('change', () => { renderChordButtons(1); updateFretboard(1); });
-            scaleTypeSelect2.addEventListener('change', () => { renderChordButtons(1); updateFretboard(1); });
-
-            document.getElementById('chord-override1').addEventListener('change', e => {
-                chordOverride[0] = e.target.value;
-                if (chordButtonActive[0] !== null) selectChordButton(0, chordButtonActive[0]);
+            document.getElementById('key-select').addEventListener('change', () => {
+                renderChordButtons();
+                updateFretboard(0);
+                updateFretboard(1);
             });
-            document.getElementById('chord-override2').addEventListener('change', e => {
-                chordOverride[1] = e.target.value;
-                if (chordButtonActive[1] !== null) selectChordButton(1, chordButtonActive[1]);
+            document.getElementById('scale-type-select').addEventListener('change', () => {
+                renderChordButtons();
+                updateFretboard(0);
+                updateFretboard(1);
             });
-
-            document.getElementById('show-intervals').addEventListener('change', e => {
-                showIntervals = e.target.checked;
+            document.getElementById('capo-select').addEventListener('change', e => {
+                capo = parseInt(e.target.value, 10);
                 updateFretboard(0);
                 updateFretboard(1);
             });
 
-            document.getElementById('capo-select1').addEventListener('change', e => {
-                capos[0] = parseInt(e.target.value, 10);
+            document.getElementById('chord-override1').addEventListener('change', e => {
+                chordOverride[0] = e.target.value;
+                if (chordButtonActive[0] !== null) selectChordButton(chordButtonActive[0]);
+            });
+            document.getElementById('chord-override2').addEventListener('change', e => {
+                chordOverride[1] = e.target.value;
+                // Re-render whichever bar is currently shown so the override takes effect immediately.
+                if (currentPreviewBarIndex !== null) highlightBar(currentPreviewBarIndex, { preview: !isPlaying });
+            });
+
+            document.getElementById('show-intervals1').addEventListener('change', e => {
+                showIntervalsPerBoard[0] = e.target.checked;
                 updateFretboard(0);
             });
-            document.getElementById('capo-select2').addEventListener('change', e => {
-                capos[1] = parseInt(e.target.value, 10);
+            document.getElementById('show-intervals2').addEventListener('change', e => {
+                showIntervalsPerBoard[1] = e.target.checked;
                 updateFretboard(1);
             });
 

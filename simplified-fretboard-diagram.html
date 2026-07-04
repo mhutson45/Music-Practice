@@ -74,8 +74,8 @@
         /* Next-bar chord tones: thicker dashed blue outline, pushed further out so
            it never overlaps the chord-tone ring even when a note has both. */
         .note.chord-tone-next {
-            outline: 4px dashed #1565ff;
-            outline-offset: 5px;
+            outline: 3px dashed #1565ff;
+            outline-offset: 3px;
             z-index: 2;
         }
 
@@ -400,12 +400,12 @@
         // quality; board 1 overrides the quality used to ring the progression's chords.
         let chordOverride = ['auto', 'auto'];
 
-        // Default 16-bar progression (A blues-style I–IV–V using dominant 7ths)
+        // Default 16-bar progression (A major I–IV–V, using plain diatonic triads)
         const defaultProgression = [
-            { root: "A", quality: "7" }, { root: "A", quality: "7" }, { root: "A", quality: "7" }, { root: "A", quality: "7" },
-            { root: "D", quality: "7" }, { root: "D", quality: "7" }, { root: "A", quality: "7" }, { root: "A", quality: "7" },
-            { root: "E", quality: "7" }, { root: "D", quality: "7" }, { root: "A", quality: "7" }, { root: "A", quality: "7" },
-            { root: "A", quality: "7" }, { root: "D", quality: "7" }, { root: "E", quality: "7" }, { root: "E", quality: "7" }
+            { root: "A", quality: "maj" }, { root: "A", quality: "maj" }, { root: "A", quality: "maj" }, { root: "A", quality: "maj" },
+            { root: "D", quality: "maj" }, { root: "D", quality: "maj" }, { root: "A", quality: "maj" }, { root: "A", quality: "maj" },
+            { root: "E", quality: "maj" }, { root: "D", quality: "maj" }, { root: "A", quality: "maj" }, { root: "A", quality: "maj" },
+            { root: "A", quality: "maj" }, { root: "D", quality: "maj" }, { root: "E", quality: "maj" }, { root: "E", quality: "maj" }
         ];
         let progression = defaultProgression.map(c => ({ ...c }));
 

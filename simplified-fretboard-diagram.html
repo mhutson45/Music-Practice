@@ -511,6 +511,15 @@
         }
 
         function selectChordButton(degreeIndex) {
+            // Clicking the already-active button deselects it, clearing the ring.
+            if (chordButtonActive[0] === degreeIndex) {
+                chordButtonActive[0] = null;
+                chordButtonPCs[0] = null;
+                document.querySelectorAll('#chord-buttons1 button').forEach(b => b.classList.remove('active'));
+                updateFretboard(0);
+                return;
+            }
+
             const rootNoteIndex = notes.indexOf(document.getElementById('key-select').value);
             const scale = scales[document.getElementById('scale-type-select').value];
             const chord = computeDiatonicChord(rootNoteIndex, scale, degreeIndex);

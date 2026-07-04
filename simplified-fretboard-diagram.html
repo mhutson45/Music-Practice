@@ -85,19 +85,12 @@
         }
         .bar-cell.disabled { opacity: 0.35; }
 
-        /* Triad highlight rings (distinct from chord-progression rings).
-           Both can appear on the same note at once (double ring) when a note
-           belongs to both the selected chord and the one that follows it. */
+        /* Chord-button highlight ring (distinct from chord-progression rings) */
         .note.triad-tone {
             outline: 3px solid #9b30ff;
             outline-offset: 4px;
             z-index: 4;
         }
-        .note.triad-tone-next {
-            box-shadow: 0 0 0 3px #ff8c00;
-            z-index: 4;
-        }
-        .chord-buttons button.active-next { border-style: dashed; border-color: #ff8c00; }
 
         /* Chord progression section */
         .progression { margin-top: 40px; border-top: 2px solid #333; padding-top: 20px; }
@@ -385,7 +378,6 @@
         let nextChordPCs = null;   // Set of pitch classes for the upcoming chord, or null
         let capos = [0, 0];        // capo fret per fretboard
         let chordButtonPCs = [null, null];   // ringed pitch classes from a clicked diatonic chord button, per fretboard
-        let chordButtonNextPCs = [null, null]; // ringed pitch classes for the following scale degree's chord, per fretboard
         let chordButtonActive = [null, null]; // active degree index per fretboard, or null
         let chordOverride = ['auto', 'auto'];  // chord-type override key per fretboard, or 'auto'
 
@@ -459,7 +451,6 @@
             container.innerHTML = '';
             chordButtonActive[boardIndex] = null;
             chordButtonPCs[boardIndex] = null;
-            chordButtonNextPCs[boardIndex] = null;
 
             if (scale.length !== 7) {
                 const msg = document.createElement('span');
@@ -492,16 +483,8 @@
             chordButtonPCs[boardIndex] = qualityKey ? chordPCsForRootAndQuality(chord.rootName, qualityKey) : chord.pcs;
             chordButtonActive[boardIndex] = degreeIndex;
 
-            // The following scale degree's diatonic chord, always at its own default quality
-            // (the override only applies to the chord you explicitly selected).
-            const nextDegreeIndex = (degreeIndex + 1) % scale.length;
-            const nextChord = computeDiatonicChord(rootNoteIndex, scale, nextDegreeIndex);
-            chordButtonNextPCs[boardIndex] = nextChord.pcs;
-
             document.querySelectorAll(`#chord-buttons${boardIndex + 1} button`).forEach(b => {
-                const d = Number(b.dataset.degree);
-                b.classList.toggle('active', d === degreeIndex);
-                b.classList.toggle('active-next', d === nextDegreeIndex);
+                b.classList.toggle('active', Number(b.dataset.degree) === degreeIndex);
             });
             updateFretboard(boardIndex);
         }
@@ -639,7 +622,6 @@
             const noteSet = new Set(scale.map(interval => (rootNoteIndex + intervals[interval]) % 12));
             const capo = capos[boardIndex];
             const chordPCs = chordButtonPCs[boardIndex];
-            const chordNextPCs = chordButtonNextPCs[boardIndex];
 
             fretboardElement.innerHTML = '';
             for (let i = 0; i < 22; i++) {
@@ -672,9 +654,6 @@
                         }
                         if (chordPCs && chordPCs.has(noteIndex)) {
                             noteDiv.classList.add('triad-tone');
-                        }
-                        if (chordNextPCs && chordNextPCs.has(noteIndex)) {
-                            noteDiv.classList.add('triad-tone-next');
                         }
                         fretDiv.appendChild(noteDiv);
                     }

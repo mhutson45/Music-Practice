@@ -44,9 +44,11 @@
         .controls { margin-bottom: 20px; }
         select, button { margin-right: 10px; padding: 5px; }
         .tuning-controls { display: flex; justify-content: space-between; margin-bottom: 10px; }
+        .tuning-controls.hidden { display: none; }
         .string-tuning { width: 50px; }
         .tuning-label { font-weight: bold; margin-bottom: 5px; }
         .string-label { font-size: 12px; margin-bottom: 2px; }
+        .tuning-preset-row { margin-bottom: 10px; }
         
         /* Interval colors */
         .interval-1 { background-color: #ff6666; }
@@ -83,6 +85,13 @@
         }
         .bar-cell.disabled { opacity: 0.35; }
 
+        /* Triad highlight ring (distinct from chord-progression rings) */
+        .note.triad-tone {
+            outline: 3px solid #9b30ff;
+            outline-offset: 4px;
+            z-index: 4;
+        }
+
         /* Chord progression section */
         .progression { margin-top: 40px; border-top: 2px solid #333; padding-top: 20px; }
         .transport { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
@@ -110,9 +119,14 @@
         <select id="scale-type-select1"></select>
         <label for="capo-select1">Capo:</label>
         <select id="capo-select1" class="capo-select"></select>
+        <label for="triad-select1">Highlight Triad:</label>
+        <select id="triad-select1" class="triad-select"></select>
     </div>
     <div class="tuning-label">Tuning:</div>
-    <div id="tuning-controls1" class="tuning-controls"></div>
+    <div class="tuning-preset-row">
+        <select id="tuning-preset1" class="tuning-preset"></select>
+    </div>
+    <div id="tuning-controls1" class="tuning-controls hidden"></div>
     <div class="fretboard-container">
         <div id="fretboard1" class="fretboard"></div>
     </div>
@@ -123,9 +137,14 @@
         <select id="scale-type-select2"></select>
         <label for="capo-select2">Capo:</label>
         <select id="capo-select2" class="capo-select"></select>
+        <label for="triad-select2">Highlight Triad:</label>
+        <select id="triad-select2" class="triad-select"></select>
     </div>
     <div class="tuning-label">Tuning:</div>
-    <div id="tuning-controls2" class="tuning-controls"></div>
+    <div class="tuning-preset-row">
+        <select id="tuning-preset2" class="tuning-preset"></select>
+    </div>
+    <div id="tuning-controls2" class="tuning-controls hidden"></div>
     <div class="fretboard-container">
         <div id="fretboard2" class="fretboard"></div>
     </div>
@@ -185,10 +204,30 @@
         const stringLabels = ["High E", "B", "G", "D", "A", "Low E"];
         let currentTunings = [defaultTuning.slice(), defaultTuning.slice()];
 
+        // Most common 6-string guitar tunings, ordered most -> least common.
+        // Notes given low string to high string (standard notation), reversed to
+        // high-to-low when applied since that's how currentTunings is stored.
+        const tuningPresets = [
+            { name: "Standard", notesLowToHigh: ["E", "A", "D", "G", "B", "E"] },
+            { name: "Drop D", notesLowToHigh: ["D", "A", "D", "G", "B", "E"] },
+            { name: "Half Step Down (Eb Standard)", notesLowToHigh: ["D#", "G#", "C#", "F#", "A#", "D#"] },
+            { name: "Full Step Down (D Standard)", notesLowToHigh: ["D", "G", "C", "F", "A", "D"] },
+            { name: "Drop C", notesLowToHigh: ["C", "G", "C", "F", "A", "D"] },
+            { name: "Open G", notesLowToHigh: ["D", "G", "D", "G", "B", "D"] },
+            { name: "Open D", notesLowToHigh: ["D", "A", "D", "F#", "A", "D"] },
+            { name: "DADGAD", notesLowToHigh: ["D", "A", "D", "G", "A", "D"] },
+            { name: "Open E", notesLowToHigh: ["E", "B", "E", "G#", "B", "E"] },
+            { name: "Double Drop D", notesLowToHigh: ["D", "A", "D", "G", "B", "D"] },
+            { name: "Open C", notesLowToHigh: ["C", "G", "C", "G", "C", "E"] },
+            { name: "Open A", notesLowToHigh: ["E", "A", "C#", "E", "A", "E"] },
+            { name: "Custom", notesLowToHigh: null }
+        ];
+
         let showIntervals = false;
         let activeChordPCs = null; // Set of pitch classes (0-11) for the current chord, or null
         let nextChordPCs = null;   // Set of pitch classes for the upcoming chord, or null
         let capos = [0, 0];        // capo fret per fretboard
+        let triadDegrees = [null, null]; // selected triad scale-degree index per fretboard, or null
 
         // Chord qualities -> semitone offsets from the chord root
         const chordQualities = {
@@ -218,6 +257,46 @@
         function chordPitchClasses(bar) {
             const rootIdx = notes.indexOf(bar.root);
             return new Set(chordQualities[bar.quality].map(s => (rootIdx + s) % 12));
+        }
+
+        // Builds a stacked-third triad starting on the given scale-degree index,
+        // using only notes already present in the scale (works for any scale length).
+        function scaleTriadPCs(rootNoteIndex, scale, degreeIndex) {
+            const len = scale.length;
+            const degreeIntervals = [scale[degreeIndex], scale[(degreeIndex + 2) % len], scale[(degreeIndex + 4) % len]];
+            return new Set(degreeIntervals.map(interval => (rootNoteIndex + intervals[interval]) % 12));
+        }
+
+        function refreshTriadSelect(boardIndex) {
+            const keySelect = document.getElementById(`key-select${boardIndex + 1}`);
+            const scaleTypeSelect = document.getElementById(`scale-type-select${boardIndex + 1}`);
+            const triadSelect = document.getElementById(`triad-select${boardIndex + 1}`);
+            const rootNoteIndex = notes.indexOf(keySelect.value);
+            const scale = scales[scaleTypeSelect.value];
+            const previousValue = triadSelect.value;
+
+            triadSelect.innerHTML = '';
+            const noneOption = document.createElement('option');
+            noneOption.value = '';
+            noneOption.textContent = 'None';
+            triadSelect.appendChild(noneOption);
+
+            scale.forEach((interval, i) => {
+                const rootName = notes[(rootNoteIndex + intervals[interval]) % 12];
+                const option = document.createElement('option');
+                option.value = i;
+                option.textContent = `${rootName} (degree ${i + 1})`;
+                triadSelect.appendChild(option);
+            });
+
+            // Keep the previous selection if it's still a valid degree, else reset to None.
+            if (previousValue !== '' && Number(previousValue) < scale.length) {
+                triadSelect.value = previousValue;
+                triadDegrees[boardIndex] = Number(previousValue);
+            } else {
+                triadSelect.value = '';
+                triadDegrees[boardIndex] = null;
+            }
         }
 
         function initializeSelects() {
@@ -251,6 +330,32 @@
                     select.appendChild(option);
                 }
             });
+
+            const tuningPresetSelects = [document.getElementById('tuning-preset1'), document.getElementById('tuning-preset2')];
+            tuningPresetSelects.forEach(select => {
+                tuningPresets.forEach((preset, i) => {
+                    const option = document.createElement('option');
+                    option.value = i;
+                    option.textContent = preset.notesLowToHigh
+                        ? `${preset.name} (${preset.notesLowToHigh.join(' ')})`
+                        : preset.name;
+                    select.appendChild(option);
+                });
+            });
+        }
+
+        function applyTuningPreset(tuningIndex, presetIndex) {
+            const preset = tuningPresets[presetIndex];
+            const controlsElement = document.getElementById(`tuning-controls${tuningIndex + 1}`);
+            if (!preset.notesLowToHigh) {
+                // "Custom" — reveal the per-string selects, keep current tuning as-is.
+                controlsElement.classList.remove('hidden');
+                return;
+            }
+            controlsElement.classList.add('hidden');
+            currentTunings[tuningIndex] = preset.notesLowToHigh.slice().reverse();
+            renderTuningControls(controlsElement, tuningIndex);
+            updateFretboard(tuningIndex);
         }
 
         function renderTuningControls(controlsElement, tuningIndex) {
@@ -274,6 +379,8 @@
                 });
                 select.addEventListener('change', (e) => {
                     currentTunings[tuningIndex][stringIndex] = e.target.value;
+                    const presetSelect = document.getElementById(`tuning-preset${tuningIndex + 1}`);
+                    presetSelect.value = tuningPresets.length - 1; // "Custom"
                     updateFretboard(tuningIndex);
                 });
                 stringContainer.appendChild(select);
@@ -293,6 +400,9 @@
             const scale = scales[scaleType];
             const noteSet = new Set(scale.map(interval => (rootNoteIndex + intervals[interval]) % 12));
             const capo = capos[boardIndex];
+            const triadPCs = triadDegrees[boardIndex] !== null
+                ? scaleTriadPCs(rootNoteIndex, scale, triadDegrees[boardIndex])
+                : null;
 
             fretboardElement.innerHTML = '';
             for (let i = 0; i < 22; i++) {
@@ -322,6 +432,9 @@
                             noteDiv.classList.add('chord-tone');
                         } else if (boardIndex === 1 && nextChordPCs && nextChordPCs.has(noteIndex)) {
                             noteDiv.classList.add('chord-tone-next');
+                        }
+                        if (triadPCs && triadPCs.has(noteIndex)) {
+                            noteDiv.classList.add('triad-tone');
                         }
                         fretDiv.appendChild(noteDiv);
                     }
@@ -484,10 +597,28 @@
             renderTuningControls(tuningControls1, 0);
             renderTuningControls(tuningControls2, 1);
 
-            keySelect1.addEventListener('change', () => updateFretboard(0));
-            scaleTypeSelect1.addEventListener('change', () => updateFretboard(0));
-            keySelect2.addEventListener('change', () => updateFretboard(1));
-            scaleTypeSelect2.addEventListener('change', () => updateFretboard(1));
+            document.getElementById('tuning-preset1').addEventListener('change', e => applyTuningPreset(0, Number(e.target.value)));
+            document.getElementById('tuning-preset2').addEventListener('change', e => applyTuningPreset(1, Number(e.target.value)));
+            // Default both fretboards to Standard tuning (index 0) and hide per-string controls.
+            document.getElementById('tuning-preset1').value = 0;
+            document.getElementById('tuning-preset2').value = 0;
+
+            refreshTriadSelect(0);
+            refreshTriadSelect(1);
+
+            keySelect1.addEventListener('change', () => { refreshTriadSelect(0); updateFretboard(0); });
+            scaleTypeSelect1.addEventListener('change', () => { refreshTriadSelect(0); updateFretboard(0); });
+            keySelect2.addEventListener('change', () => { refreshTriadSelect(1); updateFretboard(1); });
+            scaleTypeSelect2.addEventListener('change', () => { refreshTriadSelect(1); updateFretboard(1); });
+
+            document.getElementById('triad-select1').addEventListener('change', e => {
+                triadDegrees[0] = e.target.value === '' ? null : Number(e.target.value);
+                updateFretboard(0);
+            });
+            document.getElementById('triad-select2').addEventListener('change', e => {
+                triadDegrees[1] = e.target.value === '' ? null : Number(e.target.value);
+                updateFretboard(1);
+            });
 
             document.getElementById('show-intervals').addEventListener('change', e => {
                 showIntervals = e.target.checked;

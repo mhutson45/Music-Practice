@@ -101,6 +101,7 @@
         .bar-cell {
             border: 1px solid #ccc; border-radius: 6px; padding: 6px;
             display: flex; flex-direction: column; gap: 4px;
+            cursor: pointer;
         }
         .bar-cell.active { border-color: #111; background: #fff4d6; box-shadow: 0 0 0 2px #111; }
         .bar-cell .bar-num { font-size: 11px; color: #666; }
@@ -151,7 +152,7 @@
 
     <div class="progression">
         <h2>16-Bar Chord Progression</h2>
-        <p>Build a progression below. Pressing Play loops it with a metronome and rings the chord tones on <strong>Fretboard 2</strong> (the full scale stays visible).</p>
+        <p>Build a progression below. Pressing Play loops it with a metronome and rings the chord tones on <strong>Fretboard 2</strong> (the full scale stays visible). Click any bar to preview it: its chord tones ring solid, the next bar's chord tones ring dashed blue.</p>
         <div class="transport">
             <button id="play-btn">▶ Play</button>
             <label>BPM <input type="number" id="bpm" value="100" min="30" max="300"></label>
@@ -481,6 +482,11 @@
                 qualSel.addEventListener('change', e => { progression[i].quality = e.target.value; });
                 cell.appendChild(qualSel);
 
+                cell.addEventListener('click', e => {
+                    if (e.target.tagName === 'SELECT') return;
+                    highlightBar(i, { preview: !isPlaying });
+                });
+
                 grid.appendChild(cell);
             });
         }
@@ -525,7 +531,7 @@
             osc.stop(time + 0.06);
         }
 
-        function highlightBar(barIndex) {
+        function highlightBar(barIndex, { preview = false } = {}) {
             const loopLen = getLoopLength();
             const nextIndex = (barIndex + 1) % loopLen;
             activeChordPCs = chordPitchClasses(progression[barIndex]);
@@ -535,8 +541,9 @@
             const cell = document.getElementById(`bar-cell-${barIndex}`);
             if (cell) cell.classList.add('active');
             const c = progression[barIndex], n = progression[nextIndex];
+            const prefix = preview ? 'Previewing' : 'Bar';
             document.getElementById('now-playing').textContent =
-                `Bar ${barIndex + 1} / ${loopLen} — ${c.root}${c.quality}  →  next: ${n.root}${n.quality}`;
+                `${prefix} ${barIndex + 1} / ${loopLen} — ${c.root}${c.quality}  →  next: ${n.root}${n.quality}`;
         }
 
         function scheduler() {

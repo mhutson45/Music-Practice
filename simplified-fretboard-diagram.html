@@ -106,6 +106,16 @@
         .bar-cell.active { border-color: #111; background: #fff4d6; box-shadow: 0 0 0 2px #111; }
         .bar-cell .bar-num { font-size: 11px; color: #666; }
         .bar-cell select { margin-right: 0; width: 100%; }
+
+        /* Diatonic chord buttons per fretboard */
+        .chord-buttons-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+        .chord-buttons { display: flex; flex-wrap: wrap; gap: 6px; }
+        .chord-buttons button {
+            margin-right: 0; padding: 6px 10px; border: 1px solid #999; border-radius: 5px;
+            background: #fff; font-size: 13px; cursor: pointer;
+        }
+        .chord-buttons button.active { border-color: #111; background: #e9d9ff; box-shadow: 0 0 0 2px #9b30ff; }
+        .chord-buttons .no-chords-msg { font-size: 13px; color: #666; font-style: italic; }
     </style>
 </head>
 <body>
@@ -116,36 +126,42 @@
     <div class="controls">
         <label for="key-select1">Select Key (Fretboard 1):</label>
         <select id="key-select1"></select>
-        <label for="scale-type-select1">Select Scale/Arpeggio (Fretboard 1):</label>
+        <label for="scale-type-select1">Select Scale (Fretboard 1):</label>
         <select id="scale-type-select1"></select>
         <label for="capo-select1">Capo:</label>
         <select id="capo-select1" class="capo-select"></select>
-        <label for="triad-select1">Highlight Triad:</label>
-        <select id="triad-select1" class="triad-select"></select>
     </div>
     <div class="tuning-label">Tuning:</div>
     <div class="tuning-preset-row">
         <select id="tuning-preset1" class="tuning-preset"></select>
     </div>
     <div id="tuning-controls1" class="tuning-controls hidden"></div>
+    <div class="chord-buttons-row">
+        <label for="chord-override1">Chord Type:</label>
+        <select id="chord-override1"></select>
+        <div id="chord-buttons1" class="chord-buttons"></div>
+    </div>
     <div class="fretboard-container">
         <div id="fretboard1" class="fretboard"></div>
     </div>
     <div class="controls">
         <label for="key-select2">Select Key (Fretboard 2):</label>
         <select id="key-select2"></select>
-        <label for="scale-type-select2">Select Scale/Arpeggio (Fretboard 2):</label>
+        <label for="scale-type-select2">Select Scale (Fretboard 2):</label>
         <select id="scale-type-select2"></select>
         <label for="capo-select2">Capo:</label>
         <select id="capo-select2" class="capo-select"></select>
-        <label for="triad-select2">Highlight Triad:</label>
-        <select id="triad-select2" class="triad-select"></select>
     </div>
     <div class="tuning-label">Tuning:</div>
     <div class="tuning-preset-row">
         <select id="tuning-preset2" class="tuning-preset"></select>
     </div>
     <div id="tuning-controls2" class="tuning-controls hidden"></div>
+    <div class="chord-buttons-row">
+        <label for="chord-override2">Chord Type:</label>
+        <select id="chord-override2"></select>
+        <div id="chord-buttons2" class="chord-buttons"></div>
+    </div>
     <div class="fretboard-container">
         <div id="fretboard2" class="fretboard"></div>
     </div>
@@ -173,33 +189,166 @@
     <script>
         const notes = ["A", "A#", "B", "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#"];
         const intervals = {
-            "1": 0, "b2": 1, "2": 2, "#2": 3, "b3": 3, "3": 4, "4": 5, "b5": 6, "#4": 6, "5": 7, "b6": 8, "6": 9, 
-            "bb7": 9, "b7": 10, "7": 11, "8": 12, "b9": 1, "9": 2, "#9": 3, "10": 4, "11": 5, "#11": 6, "12": 7, 
-            "b13": 8, "13": 9
+            "1": 0, "b2": 1, "2": 2, "#2": 3, "b3": 3, "b4": 4, "3": 4, "4": 5, "b5": 6, "#4": 6, "5": 7,
+            "#5": 8, "b6": 8, "6": 9, "bb7": 9, "b7": 10, "7": 11, "8": 12, "b9": 1, "9": 2, "#9": 3, "10": 4,
+            "11": 5, "#11": 6, "12": 7, "b13": 8, "13": 9
         };
 
-        const scales = {
-            major: ["1", "2", "3", "4", "5", "6", "7"],
-            minor: ["1", "2", "b3", "4", "5", "b6", "b7"],
-            harmonic_minor: ["1", "2", "b3", "4", "5", "b6", "7"],
-            melodic_minor: ["1", "2", "b3", "4", "5", "6", "7"],
-            major_pentatonic: ["1", "2", "3", "5", "6"],
-            minor_pentatonic: ["1", "b3", "4", "5", "b7"],
-            blues: ["1", "b3", "4", "b5", "5", "b7"],
-            bluegrass: ["1", "2", "b3", "3", "b5", "5", "6"],
-            major7: ["1", "3", "5", "7"],
-            minor7: ["1", "b3", "5", "b7"],
-            dominant7: ["1", "3", "5", "b7"],
-            min7b5: ["1", "b3", "b5", "b7"],
-            minMaj7: ["1", "b3", "5", "7"],
-            maj7sharp5: ["1", "3", "#5", "7"],
-            dim: ["1", "b3", "b5", "6"],
-            maj7b5: ["1", "3", "b5", "7"],
-            dom7sharp5: ["1", "3", "#5", "b7"],
-            dom7b5: ["1", "3", "b5", "b7"],
-            major_triad: ["1", "3", "5"],
-            minor_triad: ["1", "b3", "5"]
-        };
+        // Scales & modes only — arpeggio/chord shapes live in chordTypeGroups below.
+        // Grouped for the <optgroup> UI; some scales are intentionally cross-listed
+        // under more than one theoretical grouping (e.g. Melodic Minor also appears
+        // as mode 1 of "Melodic Minor Modes").
+        const scaleGroups = [
+            {
+                group: "Major Scale Modes",
+                items: [
+                    { key: "ionian", name: "Ionian (Major)", intervals: ["1", "2", "3", "4", "5", "6", "7"] },
+                    { key: "dorian", name: "Dorian", intervals: ["1", "2", "b3", "4", "5", "6", "b7"] },
+                    { key: "phrygian", name: "Phrygian", intervals: ["1", "b2", "b3", "4", "5", "b6", "b7"] },
+                    { key: "lydian", name: "Lydian", intervals: ["1", "2", "3", "#4", "5", "6", "7"] },
+                    { key: "mixolydian", name: "Mixolydian", intervals: ["1", "2", "3", "4", "5", "6", "b7"] },
+                    { key: "aeolian", name: "Aeolian (Natural Minor)", intervals: ["1", "2", "b3", "4", "5", "b6", "b7"] },
+                    { key: "locrian", name: "Locrian", intervals: ["1", "b2", "b3", "4", "b5", "b6", "b7"] }
+                ]
+            },
+            {
+                group: "Minor Scale Variants",
+                items: [
+                    { key: "natural_minor", name: "Natural Minor", intervals: ["1", "2", "b3", "4", "5", "b6", "b7"] },
+                    { key: "harmonic_minor", name: "Harmonic Minor", intervals: ["1", "2", "b3", "4", "5", "b6", "7"] },
+                    { key: "melodic_minor", name: "Melodic Minor (Jazz)", intervals: ["1", "2", "b3", "4", "5", "6", "7"] },
+                    { key: "dorian_b2", name: "Dorian ♭2", intervals: ["1", "b2", "b3", "4", "5", "6", "b7"] }
+                ]
+            },
+            {
+                group: "Melodic Minor Modes",
+                items: [
+                    { key: "mm_mode1", name: "Melodic Minor", intervals: ["1", "2", "b3", "4", "5", "6", "7"] },
+                    { key: "mm_mode2", name: "Dorian ♭2", intervals: ["1", "b2", "b3", "4", "5", "6", "b7"] },
+                    { key: "lydian_augmented", name: "Lydian Augmented", intervals: ["1", "2", "3", "#4", "#5", "6", "7"] },
+                    { key: "lydian_dominant", name: "Lydian Dominant", intervals: ["1", "2", "3", "#4", "5", "6", "b7"] },
+                    { key: "mixolydian_b6", name: "Mixolydian ♭6", intervals: ["1", "2", "3", "4", "5", "b6", "b7"] },
+                    { key: "locrian_nat2", name: "Locrian ♮2 (Half-Diminished)", intervals: ["1", "2", "b3", "4", "b5", "b6", "b7"] },
+                    { key: "altered", name: "Altered (Super Locrian)", intervals: ["1", "b2", "#2", "3", "b5", "#5", "b7"] }
+                ]
+            },
+            {
+                group: "Harmonic Minor Modes",
+                items: [
+                    { key: "hm_mode1", name: "Harmonic Minor", intervals: ["1", "2", "b3", "4", "5", "b6", "7"] },
+                    { key: "locrian_nat6", name: "Locrian ♮6", intervals: ["1", "b2", "b3", "4", "b5", "6", "b7"] },
+                    { key: "ionian_augmented", name: "Ionian Augmented", intervals: ["1", "2", "3", "4", "#5", "6", "7"] },
+                    { key: "dorian_sharp4", name: "Dorian ♯4", intervals: ["1", "2", "b3", "#4", "5", "6", "b7"] },
+                    { key: "phrygian_dominant", name: "Phrygian Dominant", intervals: ["1", "b2", "3", "4", "5", "b6", "b7"] },
+                    { key: "lydian_sharp2", name: "Lydian ♯2", intervals: ["1", "#2", "3", "#4", "5", "6", "7"] },
+                    { key: "ultralocrian", name: "Ultralocrian", intervals: ["1", "b2", "b3", "b4", "b5", "b6", "bb7"] }
+                ]
+            },
+            {
+                group: "Symmetric Scales",
+                items: [
+                    { key: "whole_tone", name: "Whole Tone", intervals: ["1", "2", "3", "#4", "#5", "b7"] },
+                    { key: "dim_whole_half", name: "Diminished (Whole-Half)", intervals: ["1", "2", "b3", "4", "b5", "b6", "6", "7"] },
+                    { key: "dim_half_whole", name: "Diminished (Half-Whole)", intervals: ["1", "b2", "#2", "3", "#4", "5", "6", "b7"] },
+                    { key: "chromatic", name: "Chromatic", intervals: ["1", "b2", "2", "b3", "3", "4", "b5", "5", "b6", "6", "b7", "7"] }
+                ]
+            },
+            {
+                group: "Bebop Scales",
+                items: [
+                    { key: "bebop_major", name: "Bebop Major", intervals: ["1", "2", "3", "4", "5", "#5", "6", "7"] },
+                    { key: "bebop_dominant", name: "Bebop Dominant", intervals: ["1", "2", "3", "4", "5", "6", "b7", "7"] },
+                    { key: "bebop_minor", name: "Bebop Minor", intervals: ["1", "2", "b3", "3", "4", "5", "6", "b7"] },
+                    { key: "bebop_melodic_minor", name: "Bebop Melodic Minor", intervals: ["1", "2", "b3", "4", "5", "#5", "6", "7"] }
+                ]
+            },
+            {
+                group: "Pentatonic & Blues",
+                items: [
+                    { key: "major_pentatonic", name: "Major Pentatonic", intervals: ["1", "2", "3", "5", "6"] },
+                    { key: "minor_pentatonic", name: "Minor Pentatonic", intervals: ["1", "b3", "4", "5", "b7"] },
+                    { key: "blues", name: "Blues", intervals: ["1", "b3", "4", "b5", "5", "b7"] },
+                    { key: "bluegrass", name: "Bluegrass", intervals: ["1", "2", "b3", "3", "b5", "5", "6"] }
+                ]
+            }
+        ];
+
+        // Flat lookup: scale key -> interval array (what updateFretboard etc. consume).
+        const scales = {};
+        scaleGroups.forEach(g => g.items.forEach(item => { scales[item.key] = item.intervals; }));
+
+        // Chord types, grouped for the "Chord Type" override <select> and the
+        // progression bar quality <select>. Semitone offsets are from the chord root.
+        const chordTypeGroups = [
+            {
+                group: "Triads",
+                items: [
+                    { key: "maj", name: "Major", semitones: [0, 4, 7] },
+                    { key: "min", name: "Minor", semitones: [0, 3, 7] },
+                    { key: "dim", name: "Diminished", semitones: [0, 3, 6] },
+                    { key: "aug", name: "Augmented", semitones: [0, 4, 8] },
+                    { key: "sus2", name: "Sus2", semitones: [0, 2, 7] },
+                    { key: "sus4", name: "Sus4", semitones: [0, 5, 7] }
+                ]
+            },
+            {
+                group: "Seventh Chords",
+                items: [
+                    { key: "maj7", name: "Maj7", semitones: [0, 4, 7, 11] },
+                    { key: "7", name: "7 (Dominant 7th)", semitones: [0, 4, 7, 10] },
+                    { key: "m7", name: "m7", semitones: [0, 3, 7, 10] },
+                    { key: "mMaj7", name: "mMaj7", semitones: [0, 3, 7, 11] },
+                    { key: "m7b5", name: "m7♭5 (Half-Diminished)", semitones: [0, 3, 6, 10] },
+                    { key: "dim7", name: "dim7", semitones: [0, 3, 6, 9] },
+                    { key: "maj7#5", name: "maj7♯5", semitones: [0, 4, 8, 11] },
+                    { key: "7#5", name: "7♯5", semitones: [0, 4, 8, 10] }
+                ]
+            },
+            {
+                group: "Extended Chords",
+                items: [
+                    { key: "9", name: "9 (Dominant 9th)", semitones: [0, 4, 7, 10, 2] },
+                    { key: "maj9", name: "maj9", semitones: [0, 4, 7, 11, 2] },
+                    { key: "m9", name: "m9", semitones: [0, 3, 7, 10, 2] },
+                    { key: "11", name: "11 (Dominant 11th)", semitones: [0, 4, 7, 10, 2, 5] },
+                    { key: "maj11", name: "maj11", semitones: [0, 4, 7, 11, 2, 5] },
+                    { key: "m11", name: "m11", semitones: [0, 3, 7, 10, 2, 5] },
+                    { key: "13", name: "13 (Dominant 13th)", semitones: [0, 4, 7, 10, 2, 5, 9] },
+                    { key: "maj13", name: "maj13", semitones: [0, 4, 7, 11, 2, 5, 9] },
+                    { key: "m13", name: "m13", semitones: [0, 3, 7, 10, 2, 5, 9] }
+                ]
+            },
+            {
+                group: "Altered Dominant Chords",
+                items: [
+                    { key: "7b9", name: "7♭9", semitones: [0, 4, 7, 10, 1] },
+                    { key: "7#9", name: "7♯9", semitones: [0, 4, 7, 10, 3] },
+                    { key: "7#11", name: "7♯11", semitones: [0, 4, 7, 10, 6] },
+                    { key: "7b13", name: "7♭13", semitones: [0, 4, 7, 10, 8] },
+                    { key: "7#9b13", name: "7♯9♭13", semitones: [0, 4, 7, 10, 3, 8] },
+                    { key: "7alt", name: "7alt (Altered)", semitones: [0, 4, 10, 1, 3, 6, 8] }
+                ]
+            },
+            {
+                group: "Add Chords",
+                items: [
+                    { key: "add9", name: "add9", semitones: [0, 4, 7, 2] },
+                    { key: "add11", name: "add11", semitones: [0, 4, 7, 5] },
+                    { key: "6/9", name: "6/9", semitones: [0, 4, 7, 9, 2] }
+                ]
+            },
+            {
+                group: "Sixth Chords",
+                items: [
+                    { key: "6", name: "Major 6th", semitones: [0, 4, 7, 9] },
+                    { key: "m6", name: "Minor 6th", semitones: [0, 3, 7, 9] }
+                ]
+            }
+        ];
+
+        // Flat lookup: chord-type key -> semitone offsets (from root).
+        const chordQualities = {};
+        chordTypeGroups.forEach(g => g.items.forEach(item => { chordQualities[item.key] = item.semitones; }));
 
         const defaultTuning = ["E", "B", "G", "D", "A", "E"];
         const stringLabels = ["High E", "B", "G", "D", "A", "Low E"];
@@ -228,23 +377,9 @@
         let activeChordPCs = null; // Set of pitch classes (0-11) for the current chord, or null
         let nextChordPCs = null;   // Set of pitch classes for the upcoming chord, or null
         let capos = [0, 0];        // capo fret per fretboard
-        let triadDegrees = [null, null]; // selected triad scale-degree index per fretboard, or null
-
-        // Chord qualities -> semitone offsets from the chord root
-        const chordQualities = {
-            maj:   [0, 4, 7],
-            min:   [0, 3, 7],
-            dim:   [0, 3, 6],
-            aug:   [0, 4, 8],
-            sus4:  [0, 5, 7],
-            "6":   [0, 4, 7, 9],
-            m6:    [0, 3, 7, 9],
-            maj7:  [0, 4, 7, 11],
-            "7":   [0, 4, 7, 10],
-            m7:    [0, 3, 7, 10],
-            m7b5:  [0, 3, 6, 10],
-            dim7:  [0, 3, 6, 9]
-        };
+        let chordButtonPCs = [null, null];   // ringed pitch classes from a clicked diatonic chord button, per fretboard
+        let chordButtonActive = [null, null]; // active degree index per fretboard, or null
+        let chordOverride = ['auto', 'auto'];  // chord-type override key per fretboard, or 'auto'
 
         // Default 16-bar progression (A blues-style I–IV–V using dominant 7ths)
         const defaultProgression = [
@@ -260,44 +395,121 @@
             return new Set(chordQualities[bar.quality].map(s => (rootIdx + s) % 12));
         }
 
-        // Builds a stacked-third triad starting on the given scale-degree index,
-        // using only notes already present in the scale (works for any scale length).
-        function scaleTriadPCs(rootNoteIndex, scale, degreeIndex) {
-            const len = scale.length;
-            const degreeIntervals = [scale[degreeIndex], scale[(degreeIndex + 2) % len], scale[(degreeIndex + 4) % len]];
-            return new Set(degreeIntervals.map(interval => (rootNoteIndex + intervals[interval]) % 12));
+        // Matches a set of semitone offsets (relative to a root, must include 0) against
+        // the known chord-type library. Returns the matching key, or null if no exact match.
+        function identifyChordQuality(semitoneOffsets) {
+            const target = [...new Set(semitoneOffsets)].sort((a, b) => a - b).join(',');
+            for (const key of Object.keys(chordQualities)) {
+                const candidate = [...chordQualities[key]].sort((a, b) => a - b).join(',');
+                if (candidate === target) return key;
+            }
+            return null;
         }
 
-        function refreshTriadSelect(boardIndex) {
+        // Builds a stacked-third chord (root, 3rd, 5th, 7th within the scale) starting on
+        // the given scale-degree index. Works for any scale length via modulo, though the
+        // resulting stack only reliably matches a named chord quality for 7-note scales.
+        function computeDiatonicChord(rootNoteIndex, scale, degreeIndex) {
+            const len = scale.length;
+            const degreeRootPc = (rootNoteIndex + intervals[scale[degreeIndex]]) % 12;
+            const stackIntervals = [scale[degreeIndex], scale[(degreeIndex + 2) % len], scale[(degreeIndex + 4) % len], scale[(degreeIndex + 6) % len]];
+            const semitonesFromDegreeRoot = stackIntervals.map(interval => (intervals[interval] - intervals[scale[degreeIndex]] + 12) % 12);
+            const pcs = new Set(stackIntervals.map(interval => (rootNoteIndex + intervals[interval]) % 12));
+
+            // Prefer a matching 7th-chord quality; fall back to the plain triad (first 3 stacked notes).
+            let qualityKey = identifyChordQuality(semitonesFromDegreeRoot);
+            let usedPcs = pcs;
+            if (!qualityKey) {
+                const triadSemitones = semitonesFromDegreeRoot.slice(0, 3);
+                qualityKey = identifyChordQuality(triadSemitones);
+                if (qualityKey) {
+                    usedPcs = new Set(stackIntervals.slice(0, 3).map(interval => (rootNoteIndex + intervals[interval]) % 12));
+                }
+            }
+
+            const rootName = notes[degreeRootPc];
+            const qualityName = qualityKey ? chordTypeGroups.flatMap(g => g.items).find(i => i.key === qualityKey).name : null;
+            const chordSuffixes = { maj: '', min: 'm', dim: 'dim', aug: 'aug', sus2: 'sus2', sus4: 'sus4' };
+            const suffix = qualityKey in chordSuffixes ? chordSuffixes[qualityKey] : qualityKey;
+            const label = qualityKey ? `${rootName}${suffix}` : `${rootName} (custom)`;
+            return { rootName, rootPc: degreeRootPc, qualityKey, qualityName, label, pcs: usedPcs };
+        }
+
+        // Returns the pitch-class Set for a given root note name + chord-type key.
+        function chordPCsForRootAndQuality(rootName, qualityKey) {
+            const rootIdx = notes.indexOf(rootName);
+            return new Set(chordQualities[qualityKey].map(s => (rootIdx + s) % 12));
+        }
+
+        function renderChordButtons(boardIndex) {
             const keySelect = document.getElementById(`key-select${boardIndex + 1}`);
             const scaleTypeSelect = document.getElementById(`scale-type-select${boardIndex + 1}`);
-            const triadSelect = document.getElementById(`triad-select${boardIndex + 1}`);
+            const container = document.getElementById(`chord-buttons${boardIndex + 1}`);
             const rootNoteIndex = notes.indexOf(keySelect.value);
             const scale = scales[scaleTypeSelect.value];
-            const previousValue = triadSelect.value;
 
-            triadSelect.innerHTML = '';
-            const noneOption = document.createElement('option');
-            noneOption.value = '';
-            noneOption.textContent = 'None';
-            triadSelect.appendChild(noneOption);
+            container.innerHTML = '';
+            chordButtonActive[boardIndex] = null;
+            chordButtonPCs[boardIndex] = null;
 
-            scale.forEach((interval, i) => {
-                const rootName = notes[(rootNoteIndex + intervals[interval]) % 12];
-                const option = document.createElement('option');
-                option.value = i;
-                option.textContent = `${rootName} (degree ${i + 1})`;
-                triadSelect.appendChild(option);
-            });
-
-            // Keep the previous selection if it's still a valid degree, else reset to None.
-            if (previousValue !== '' && Number(previousValue) < scale.length) {
-                triadSelect.value = previousValue;
-                triadDegrees[boardIndex] = Number(previousValue);
-            } else {
-                triadSelect.value = '';
-                triadDegrees[boardIndex] = null;
+            if (scale.length !== 7) {
+                const msg = document.createElement('span');
+                msg.className = 'no-chords-msg';
+                msg.textContent = 'Diatonic chord buttons are available for 7-note scales.';
+                container.appendChild(msg);
+                return;
             }
+
+            scale.forEach((_, degreeIndex) => {
+                const chord = computeDiatonicChord(rootNoteIndex, scale, degreeIndex);
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.textContent = chord.label;
+                btn.dataset.degree = degreeIndex;
+                btn.addEventListener('click', () => selectChordButton(boardIndex, degreeIndex));
+                container.appendChild(btn);
+            });
+        }
+
+        function selectChordButton(boardIndex, degreeIndex) {
+            const keySelect = document.getElementById(`key-select${boardIndex + 1}`);
+            const scaleTypeSelect = document.getElementById(`scale-type-select${boardIndex + 1}`);
+            const rootNoteIndex = notes.indexOf(keySelect.value);
+            const scale = scales[scaleTypeSelect.value];
+            const chord = computeDiatonicChord(rootNoteIndex, scale, degreeIndex);
+
+            const override = chordOverride[boardIndex];
+            const qualityKey = (override !== 'auto' && chordQualities[override]) ? override : chord.qualityKey;
+            chordButtonPCs[boardIndex] = qualityKey ? chordPCsForRootAndQuality(chord.rootName, qualityKey) : chord.pcs;
+            chordButtonActive[boardIndex] = degreeIndex;
+
+            document.querySelectorAll(`#chord-buttons${boardIndex + 1} button`).forEach(b => {
+                b.classList.toggle('active', Number(b.dataset.degree) === degreeIndex);
+            });
+            updateFretboard(boardIndex);
+        }
+
+        // Populates a <select> with <optgroup>s from chordTypeGroups. If includeAuto,
+        // adds a leading "Auto (Diatonic)" option with value "auto".
+        function populateChordTypeSelect(select, includeAuto) {
+            select.innerHTML = '';
+            if (includeAuto) {
+                const auto = document.createElement('option');
+                auto.value = 'auto';
+                auto.textContent = 'Auto (Diatonic)';
+                select.appendChild(auto);
+            }
+            chordTypeGroups.forEach(group => {
+                const optgroup = document.createElement('optgroup');
+                optgroup.label = group.group;
+                group.items.forEach(item => {
+                    const option = document.createElement('option');
+                    option.value = item.key;
+                    option.textContent = item.name;
+                    optgroup.appendChild(option);
+                });
+                select.appendChild(optgroup);
+            });
         }
 
         function initializeSelects() {
@@ -314,13 +526,21 @@
             });
 
             scaleSelects.forEach(select => {
-                Object.keys(scales).forEach(scale => {
-                    const option = document.createElement('option');
-                    option.value = scale;
-                    option.textContent = scale.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-                    select.appendChild(option);
+                scaleGroups.forEach(group => {
+                    const optgroup = document.createElement('optgroup');
+                    optgroup.label = group.group;
+                    group.items.forEach(item => {
+                        const option = document.createElement('option');
+                        option.value = item.key;
+                        option.textContent = item.name;
+                        optgroup.appendChild(option);
+                    });
+                    select.appendChild(optgroup);
                 });
             });
+
+            const chordOverrideSelects = [document.getElementById('chord-override1'), document.getElementById('chord-override2')];
+            chordOverrideSelects.forEach(select => populateChordTypeSelect(select, true));
 
             const capoSelects = [document.getElementById('capo-select1'), document.getElementById('capo-select2')];
             capoSelects.forEach(select => {
@@ -401,9 +621,7 @@
             const scale = scales[scaleType];
             const noteSet = new Set(scale.map(interval => (rootNoteIndex + intervals[interval]) % 12));
             const capo = capos[boardIndex];
-            const triadPCs = triadDegrees[boardIndex] !== null
-                ? scaleTriadPCs(rootNoteIndex, scale, triadDegrees[boardIndex])
-                : null;
+            const chordPCs = chordButtonPCs[boardIndex];
 
             fretboardElement.innerHTML = '';
             for (let i = 0; i < 22; i++) {
@@ -434,7 +652,7 @@
                         } else if (boardIndex === 1 && nextChordPCs && nextChordPCs.has(noteIndex)) {
                             noteDiv.classList.add('chord-tone-next');
                         }
-                        if (triadPCs && triadPCs.has(noteIndex)) {
+                        if (chordPCs && chordPCs.has(noteIndex)) {
                             noteDiv.classList.add('triad-tone');
                         }
                         fretDiv.appendChild(noteDiv);
@@ -473,12 +691,8 @@
                 cell.appendChild(rootSel);
 
                 const qualSel = document.createElement('select');
-                Object.keys(chordQualities).forEach(q => {
-                    const o = document.createElement('option');
-                    o.value = q; o.textContent = q;
-                    if (q === bar.quality) o.selected = true;
-                    qualSel.appendChild(o);
-                });
+                populateChordTypeSelect(qualSel, false);
+                qualSel.value = bar.quality;
                 qualSel.addEventListener('change', e => { progression[i].quality = e.target.value; });
                 cell.appendChild(qualSel);
 
@@ -610,21 +824,21 @@
             document.getElementById('tuning-preset1').value = 0;
             document.getElementById('tuning-preset2').value = 0;
 
-            refreshTriadSelect(0);
-            refreshTriadSelect(1);
+            renderChordButtons(0);
+            renderChordButtons(1);
 
-            keySelect1.addEventListener('change', () => { refreshTriadSelect(0); updateFretboard(0); });
-            scaleTypeSelect1.addEventListener('change', () => { refreshTriadSelect(0); updateFretboard(0); });
-            keySelect2.addEventListener('change', () => { refreshTriadSelect(1); updateFretboard(1); });
-            scaleTypeSelect2.addEventListener('change', () => { refreshTriadSelect(1); updateFretboard(1); });
+            keySelect1.addEventListener('change', () => { renderChordButtons(0); updateFretboard(0); });
+            scaleTypeSelect1.addEventListener('change', () => { renderChordButtons(0); updateFretboard(0); });
+            keySelect2.addEventListener('change', () => { renderChordButtons(1); updateFretboard(1); });
+            scaleTypeSelect2.addEventListener('change', () => { renderChordButtons(1); updateFretboard(1); });
 
-            document.getElementById('triad-select1').addEventListener('change', e => {
-                triadDegrees[0] = e.target.value === '' ? null : Number(e.target.value);
-                updateFretboard(0);
+            document.getElementById('chord-override1').addEventListener('change', e => {
+                chordOverride[0] = e.target.value;
+                if (chordButtonActive[0] !== null) selectChordButton(0, chordButtonActive[0]);
             });
-            document.getElementById('triad-select2').addEventListener('change', e => {
-                triadDegrees[1] = e.target.value === '' ? null : Number(e.target.value);
-                updateFretboard(1);
+            document.getElementById('chord-override2').addEventListener('change', e => {
+                chordOverride[1] = e.target.value;
+                if (chordButtonActive[1] !== null) selectChordButton(1, chordButtonActive[1]);
             });
 
             document.getElementById('show-intervals').addEventListener('change', e => {

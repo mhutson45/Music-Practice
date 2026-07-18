@@ -407,12 +407,13 @@
             },
             banjo: {
                 name: "Banjo (5-String)",
-                // Index 0 is the short 5th "drone" string, drawn at the top like standard
-                // banjo tab. It's reentrant (tuned higher than string 1) and only spans
-                // frets 5-22, which stringMinFrets enforces below.
-                stringLabels: ["5th (short)", "1st", "2nd", "3rd", "4th"],
-                stringMinFrets: [5, 0, 0, 0, 0],
-                defaultTuning: ["G", "D", "B", "G", "D"],
+                // Index 4 (drawn at the bottom, on the other side of the neck from the
+                // 1st string) is the short 5th "drone" string. It's reentrant (tuned
+                // higher than string 1) and only spans frets 5-22, which stringMinFrets
+                // enforces below.
+                stringLabels: ["1st", "2nd", "3rd", "4th", "5th (short)"],
+                stringMinFrets: [0, 0, 0, 0, 5],
+                defaultTuning: ["D", "B", "G", "D", "G"],
                 // Common 5-string banjo tunings, ordered most -> least common.
                 // Notes given low string to high string (string 4 -> string 1); the 5th
                 // string's note is given separately since it always sits above string 1.
@@ -635,12 +636,12 @@
             populateTuningPresetSelect();
         }
 
-        // Builds the full high-to-low tuning array for a preset, matching how each
-        // instrument's fretboard rows are ordered (guitar: simple reverse; banjo: the
-        // short 5th string goes first, then strings 1-4 reversed from low-to-high).
+        // Builds the full tuning array for a preset, matching how each instrument's
+        // fretboard rows are ordered (guitar: simple reverse; banjo: strings 1-4
+        // reversed from low-to-high, then the short 5th string last).
         function buildTuningFromPreset(preset) {
             if (currentInstrument === 'banjo') {
-                return [preset.fifthString, ...preset.notesLowToHigh.slice().reverse()];
+                return [...preset.notesLowToHigh.slice().reverse(), preset.fifthString];
             }
             return preset.notesLowToHigh.slice().reverse();
         }

@@ -132,10 +132,21 @@
         .role-legend { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; font-size: 12px; color: #444; }
         .role-legend span { display: inline-flex; align-items: center; gap: 4px; }
         .role-legend .swatch { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+
+        .instrument-tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+        .instrument-tab {
+            padding: 8px 16px; border: 1px solid #999; border-radius: 6px 6px 0 0;
+            background: #eee; font-size: 14px; cursor: pointer; border-bottom: none;
+        }
+        .instrument-tab.active { background: #fff; border-color: #111; font-weight: bold; box-shadow: 0 2px 0 #fff; }
     </style>
 </head>
 <body>
     <h1>Customizable Fretboard Diagram</h1>
+    <div class="instrument-tabs">
+        <button type="button" class="instrument-tab active" data-instrument="guitar">🎸 Guitar (6-String)</button>
+        <button type="button" class="instrument-tab" data-instrument="banjo">🪕 Banjo (5-String)</button>
+    </div>
     <div class="controls">
         <label for="key-select">Select Key:</label>
         <select id="key-select"></select>
@@ -366,28 +377,58 @@
         const chordQualities = {};
         chordTypeGroups.forEach(g => g.items.forEach(item => { chordQualities[item.key] = item.semitones; }));
 
-        const defaultTuning = ["E", "B", "G", "D", "A", "E"];
-        const stringLabels = ["High E", "B", "G", "D", "A", "Low E"];
-        let currentTuning = defaultTuning.slice();
-
-        // Most common 6-string guitar tunings, ordered most -> least common.
-        // Notes given low string to high string (standard notation), reversed to
-        // high-to-low when applied since that's how currentTuning is stored.
-        const tuningPresets = [
-            { name: "Standard", notesLowToHigh: ["E", "A", "D", "G", "B", "E"] },
-            { name: "Drop D", notesLowToHigh: ["D", "A", "D", "G", "B", "E"] },
-            { name: "Half Step Down (Eb Standard)", notesLowToHigh: ["D#", "G#", "C#", "F#", "A#", "D#"] },
-            { name: "Full Step Down (D Standard)", notesLowToHigh: ["D", "G", "C", "F", "A", "D"] },
-            { name: "Drop C", notesLowToHigh: ["C", "G", "C", "F", "A", "D"] },
-            { name: "Open G", notesLowToHigh: ["D", "G", "D", "G", "B", "D"] },
-            { name: "Open D", notesLowToHigh: ["D", "A", "D", "F#", "A", "D"] },
-            { name: "DADGAD", notesLowToHigh: ["D", "A", "D", "G", "A", "D"] },
-            { name: "Open E", notesLowToHigh: ["E", "B", "E", "G#", "B", "E"] },
-            { name: "Double Drop D", notesLowToHigh: ["D", "A", "D", "G", "B", "D"] },
-            { name: "Open C", notesLowToHigh: ["C", "G", "C", "G", "C", "E"] },
-            { name: "Open A", notesLowToHigh: ["E", "A", "C#", "E", "A", "E"] },
-            { name: "Custom", notesLowToHigh: null }
-        ];
+        // Instrument definitions. Each fretboard position (index0 = top row) is always
+        // the same string across every tuning preset for that instrument, so per-string
+        // concerns (labels, minimum playable fret) live on the instrument, not the tuning.
+        const instruments = {
+            guitar: {
+                name: "Guitar (6-String)",
+                stringLabels: ["High E", "B", "G", "D", "A", "Low E"],
+                stringMinFrets: [0, 0, 0, 0, 0, 0],
+                defaultTuning: ["E", "B", "G", "D", "A", "E"],
+                // Most common 6-string guitar tunings, ordered most -> least common.
+                // Notes given low string to high string (standard notation), reversed to
+                // high-to-low when applied since that's how currentTuning is stored.
+                tuningPresets: [
+                    { name: "Standard", notesLowToHigh: ["E", "A", "D", "G", "B", "E"] },
+                    { name: "Drop D", notesLowToHigh: ["D", "A", "D", "G", "B", "E"] },
+                    { name: "Half Step Down (Eb Standard)", notesLowToHigh: ["D#", "G#", "C#", "F#", "A#", "D#"] },
+                    { name: "Full Step Down (D Standard)", notesLowToHigh: ["D", "G", "C", "F", "A", "D"] },
+                    { name: "Drop C", notesLowToHigh: ["C", "G", "C", "F", "A", "D"] },
+                    { name: "Open G", notesLowToHigh: ["D", "G", "D", "G", "B", "D"] },
+                    { name: "Open D", notesLowToHigh: ["D", "A", "D", "F#", "A", "D"] },
+                    { name: "DADGAD", notesLowToHigh: ["D", "A", "D", "G", "A", "D"] },
+                    { name: "Open E", notesLowToHigh: ["E", "B", "E", "G#", "B", "E"] },
+                    { name: "Double Drop D", notesLowToHigh: ["D", "A", "D", "G", "B", "D"] },
+                    { name: "Open C", notesLowToHigh: ["C", "G", "C", "G", "C", "E"] },
+                    { name: "Open A", notesLowToHigh: ["E", "A", "C#", "E", "A", "E"] },
+                    { name: "Custom", notesLowToHigh: null }
+                ]
+            },
+            banjo: {
+                name: "Banjo (5-String)",
+                // Index 0 is the short 5th "drone" string, drawn at the top like standard
+                // banjo tab. It's reentrant (tuned higher than string 1) and only spans
+                // frets 5-22, which stringMinFrets enforces below.
+                stringLabels: ["5th (short)", "1st", "2nd", "3rd", "4th"],
+                stringMinFrets: [5, 0, 0, 0, 0],
+                defaultTuning: ["G", "D", "B", "G", "D"],
+                // Common 5-string banjo tunings, ordered most -> least common.
+                // Notes given low string to high string (string 4 -> string 1); the 5th
+                // string's note is given separately since it always sits above string 1.
+                tuningPresets: [
+                    { name: "Open G (Standard)", notesLowToHigh: ["D", "G", "B", "D"], fifthString: "G" },
+                    { name: "Double C", notesLowToHigh: ["C", "G", "C", "D"], fifthString: "G" },
+                    { name: "Sawmill (Mountain Modal)", notesLowToHigh: ["D", "G", "C", "D"], fifthString: "G" },
+                    { name: "Open D", notesLowToHigh: ["D", "F#", "A", "D"], fifthString: "F#" },
+                    { name: "Open C", notesLowToHigh: ["C", "G", "C", "E"], fifthString: "G" },
+                    { name: "Guitar Tuning (G Tuning Capo 2 style)", notesLowToHigh: ["D", "G", "B", "E"], fifthString: "G" },
+                    { name: "Custom", notesLowToHigh: null }
+                ]
+            }
+        };
+        let currentInstrument = 'guitar';
+        let currentTuning = instruments[currentInstrument].defaultTuning.slice();
 
         let showIntervalsPerBoard = [false, false]; // "show intervals" toggle, independent per fretboard
         let activeChordPCs = null; // Set of pitch classes (0-11) for the current chord, or null
@@ -591,19 +632,40 @@
                 capoSelect.appendChild(option);
             }
 
+            populateTuningPresetSelect();
+        }
+
+        // Builds the full high-to-low tuning array for a preset, matching how each
+        // instrument's fretboard rows are ordered (guitar: simple reverse; banjo: the
+        // short 5th string goes first, then strings 1-4 reversed from low-to-high).
+        function buildTuningFromPreset(preset) {
+            if (currentInstrument === 'banjo') {
+                return [preset.fifthString, ...preset.notesLowToHigh.slice().reverse()];
+            }
+            return preset.notesLowToHigh.slice().reverse();
+        }
+
+        function tuningPresetLabel(preset) {
+            if (!preset.notesLowToHigh) return preset.name;
+            if (currentInstrument === 'banjo') {
+                return `${preset.name} (5th:${preset.fifthString} ${preset.notesLowToHigh.join(' ')})`;
+            }
+            return `${preset.name} (${preset.notesLowToHigh.join(' ')})`;
+        }
+
+        function populateTuningPresetSelect() {
             const tuningPresetSelect = document.getElementById('tuning-preset');
-            tuningPresets.forEach((preset, i) => {
+            tuningPresetSelect.innerHTML = '';
+            instruments[currentInstrument].tuningPresets.forEach((preset, i) => {
                 const option = document.createElement('option');
                 option.value = i;
-                option.textContent = preset.notesLowToHigh
-                    ? `${preset.name} (${preset.notesLowToHigh.join(' ')})`
-                    : preset.name;
+                option.textContent = tuningPresetLabel(preset);
                 tuningPresetSelect.appendChild(option);
             });
         }
 
         function applyTuningPreset(presetIndex) {
-            const preset = tuningPresets[presetIndex];
+            const preset = instruments[currentInstrument].tuningPresets[presetIndex];
             const controlsElement = document.getElementById('tuning-controls');
             if (!preset.notesLowToHigh) {
                 // "Custom" — reveal the per-string selects, keep current tuning as-is.
@@ -611,7 +673,7 @@
                 return;
             }
             controlsElement.classList.add('hidden');
-            currentTuning = preset.notesLowToHigh.slice().reverse();
+            currentTuning = buildTuningFromPreset(preset);
             renderTuningControls(controlsElement);
             updateFretboard(0);
             updateFretboard(1);
@@ -619,6 +681,7 @@
 
         function renderTuningControls(controlsElement) {
             controlsElement.innerHTML = '';
+            const stringLabels = instruments[currentInstrument].stringLabels;
             currentTuning.forEach((note, stringIndex) => {
                 const stringContainer = document.createElement('div');
 
@@ -638,13 +701,31 @@
                 });
                 select.addEventListener('change', (e) => {
                     currentTuning[stringIndex] = e.target.value;
-                    document.getElementById('tuning-preset').value = tuningPresets.length - 1; // "Custom"
+                    document.getElementById('tuning-preset').value = instruments[currentInstrument].tuningPresets.length - 1; // "Custom"
                     updateFretboard(0);
                     updateFretboard(1);
                 });
                 stringContainer.appendChild(select);
                 controlsElement.appendChild(stringContainer);
             });
+        }
+
+        function switchInstrument(key) {
+            if (key === currentInstrument) return;
+            currentInstrument = key;
+            currentTuning = instruments[key].defaultTuning.slice();
+
+            document.querySelectorAll('.instrument-tab').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.instrument === key);
+            });
+
+            populateTuningPresetSelect();
+            document.getElementById('tuning-preset').value = 0;
+            document.getElementById('tuning-controls').classList.add('hidden');
+            renderTuningControls(document.getElementById('tuning-controls'));
+
+            updateFretboard(0);
+            updateFretboard(1);
         }
 
         function updateFretboard(boardIndex) {
@@ -658,6 +739,7 @@
             const scale = scales[scaleType];
             const noteSet = new Set(scale.map(interval => (rootNoteIndex + intervals[interval]) % 12));
             const chordPCs = chordButtonPCs[boardIndex];
+            const stringMinFrets = instruments[currentInstrument].stringMinFrets;
 
             fretboardElement.innerHTML = '';
             for (let i = 0; i < 22; i++) {
@@ -672,6 +754,10 @@
                     const stringNoteIndex = notes.indexOf(stringNote);
                     const noteIndex = (stringNoteIndex + i) % 12;
                     const noteName = notes[noteIndex];
+                    // A short string (e.g. a banjo's 5th string) doesn't physically exist
+                    // below its minimum fret, so skip it entirely — no line, no note.
+                    const minFret = stringMinFrets[stringIndex] || 0;
+                    if (i < minFret) return;
                     // Notes behind the capo can't be played, so don't show them
                     const isScaleNote = noteSet.has(noteIndex) && i >= capo;
                     const stringDiv = document.createElement('div');
@@ -851,6 +937,10 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             initializeSelects();
+
+            document.querySelectorAll('.instrument-tab').forEach(btn => {
+                btn.addEventListener('click', () => switchInstrument(btn.dataset.instrument));
+            });
 
             const tuningControls = document.getElementById('tuning-controls');
             renderTuningControls(tuningControls);

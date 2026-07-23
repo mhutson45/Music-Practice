@@ -671,6 +671,73 @@
             return null;
         }
 
+        // For every diatonic chord except the tonic and any diminished/half-diminished
+        // chord (no conventional "V7 of vii°"), the secondary dominant is a dominant 7th
+        // built a 5th above that chord's root, resolving into it.
+        function computeSecondaryDominants(rootNoteIndex, scale) {
+            const results = [];
+            for (let d = 1; d < scale.length; d++) {
+                const target = computeDiatonicChord(rootNoteIndex, scale, d);
+                if (!target.qualityKey || ['dim', 'dim7', 'm7b5'].includes(target.qualityKey)) continue;
+                const secDomRootPc = (target.rootPc + 7) % 12;
+                results.push({
+                    targetRoman: buildRomanNumeral(scale[d], target.qualityKey),
+                    targetLabel: target.label,
+                    secDomLabel: `${notes[secDomRootPc]}7`,
+                    secDomRootPc
+                });
+            }
+            return results;
+        }
+
+        // Tritone subs replace a dominant 7th chord with the dominant 7th a tritone away
+        // (they share the same 3rd and 7th, just swapped) — covers both the scale's own
+        // diatonic dominant chord(s) and every secondary dominant computed above.
+        function computeTritoneSubs(rootNoteIndex, scale, secondaryDominants) {
+            const results = [];
+            scale.forEach((intervalName, d) => {
+                const chord = computeDiatonicChord(rootNoteIndex, scale, d);
+                if (chord.qualityKey !== '7') return;
+                const subRootPc = (chord.rootPc + 6) % 12;
+                results.push({
+                    forLabel: chord.label,
+                    forRoman: buildRomanNumeral(intervalName, chord.qualityKey),
+                    subLabel: `${notes[subRootPc]}7`
+                });
+            });
+            secondaryDominants.forEach(sd => {
+                const subRootPc = (sd.secDomRootPc + 6) % 12;
+                results.push({
+                    forLabel: sd.secDomLabel,
+                    forRoman: `V7/${sd.targetRoman}`,
+                    subLabel: `${notes[subRootPc]}7 (subV7/${sd.targetRoman})`
+                });
+            });
+            return results;
+        }
+
+        // Classic chromatic passing diminished 7th chords: wherever two consecutive
+        // diatonic chords sit a whole step apart, a dim7 built a half-step above the
+        // first chord's root smoothly connects them (e.g. I - #Idim7 - ii).
+        function computePassingChords(rootNoteIndex, scale) {
+            const results = [];
+            const n = scale.length;
+            for (let d = 0; d < n; d++) {
+                const nextD = (d + 1) % n;
+                const chordA = computeDiatonicChord(rootNoteIndex, scale, d);
+                const chordB = computeDiatonicChord(rootNoteIndex, scale, nextD);
+                const gap = (chordB.rootPc - chordA.rootPc + 12) % 12;
+                if (gap !== 2) continue;
+                const passingRootPc = (chordA.rootPc + 1) % 12;
+                results.push({
+                    fromLabel: chordA.label,
+                    passingLabel: `${notes[passingRootPc]}dim7`,
+                    toLabel: chordB.label
+                });
+            }
+            return results;
+        }
+
         function initializeHarmonySelects() {
             const keySelect = document.getElementById('harmony-key-select');
             notes.forEach(note => {
@@ -746,6 +813,89 @@
             table.appendChild(tbody);
             tableSection.appendChild(table);
             output.appendChild(tableSection);
+
+            // ---- Secondary dominants ----
+            const secondaryDominants = computeSecondaryDominants(rootNoteIndex, scale);
+            if (secondaryDominants.length) {
+                const secSection = document.createElement('div');
+                secSection.className = 'harmony-section';
+                secSection.innerHTML = '<h2>Secondary Dominants</h2>';
+                const secNote = document.createElement('p');
+                secNote.className = 'section-note';
+                secNote.textContent = 'The "V7 of" each chord — a dominant 7th a 5th above its root that pulls strongly into it, borrowed from outside the scale.';
+                secSection.appendChild(secNote);
+
+                const secTable = document.createElement('table');
+                secTable.className = 'chord-table';
+                secTable.innerHTML = '<thead><tr><th>Chord</th><th>Resolves To</th></tr></thead>';
+                const secBody = document.createElement('tbody');
+                secondaryDominants.forEach(sd => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td><span class="chord-name">${sd.secDomLabel}</span> <span class="roman-numeral">(V7/${sd.targetRoman})</span></td>
+                        <td><span class="chord-name">${sd.targetLabel}</span> <span class="roman-numeral">(${sd.targetRoman})</span></td>
+                    `;
+                    secBody.appendChild(tr);
+                });
+                secTable.appendChild(secBody);
+                secSection.appendChild(secTable);
+                output.appendChild(secSection);
+            }
+
+            // ---- Tritone substitutions ----
+            const tritoneSubs = computeTritoneSubs(rootNoteIndex, scale, secondaryDominants);
+            if (tritoneSubs.length) {
+                const triSection = document.createElement('div');
+                triSection.className = 'harmony-section';
+                triSection.innerHTML = '<h2>Tritone Substitutions</h2>';
+                const triNote = document.createElement('p');
+                triNote.className = 'section-note';
+                triNote.textContent = 'Swap any dominant 7th (including the secondary dominants above) for the dominant 7th a tritone away — same 3rd and 7th, smoother bass movement.';
+                triSection.appendChild(triNote);
+
+                const triTable = document.createElement('table');
+                triTable.className = 'chord-table';
+                triTable.innerHTML = '<thead><tr><th>Instead of</th><th>Play</th></tr></thead>';
+                const triBody = document.createElement('tbody');
+                tritoneSubs.forEach(t => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td><span class="chord-name">${t.forLabel}</span> <span class="roman-numeral">(${t.forRoman})</span></td>
+                        <td><span class="chord-name">${t.subLabel}</span></td>
+                    `;
+                    triBody.appendChild(tr);
+                });
+                triTable.appendChild(triBody);
+                triSection.appendChild(triTable);
+                output.appendChild(triSection);
+            }
+
+            // ---- Passing chords ----
+            const passingChords = computePassingChords(rootNoteIndex, scale);
+            if (passingChords.length) {
+                const passSection = document.createElement('div');
+                passSection.className = 'harmony-section';
+                passSection.innerHTML = '<h2>Passing Chords</h2>';
+                const passNote = document.createElement('p');
+                passNote.className = 'section-note';
+                passNote.textContent = 'Chromatic passing diminished 7ths that fill the gap wherever two diatonic chords sit a whole step apart.';
+                passSection.appendChild(passNote);
+
+                const loopList = document.createElement('div');
+                loopList.className = 'loop-list';
+                passingChords.forEach(p => {
+                    const item = document.createElement('div');
+                    item.className = 'loop-item';
+                    item.innerHTML = `
+                        <span class="loop-chord">${p.fromLabel}</span><span class="loop-arrow">→</span>
+                        <span class="loop-chord">${p.passingLabel}</span><span class="loop-arrow">→</span>
+                        <span class="loop-chord">${p.toLabel}</span>
+                    `;
+                    loopList.appendChild(item);
+                });
+                passSection.appendChild(loopList);
+                output.appendChild(passSection);
+            }
 
             // ---- Related modes (same 7 notes, different tonic) ----
             const relatives = findRelativeModes(rootNoteIndex, scale);

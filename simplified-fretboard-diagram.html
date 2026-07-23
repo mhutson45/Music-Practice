@@ -827,6 +827,10 @@
             const tableHeading = document.createElement('h2');
             tableHeading.textContent = `Diatonic Chords in ${key} ${document.getElementById('harmony-scale-select').selectedOptions[0].textContent}`;
             tableSection.appendChild(tableHeading);
+            const tableNote = document.createElement('p');
+            tableNote.className = 'section-note';
+            tableNote.textContent = 'Function reflects each chord\'s scale-degree role (Tonic: I, iii, vi · Subdominant: ii, IV · Dominant: V, vii), not its quality — a "Dominant" chord here isn\'t necessarily a literal dominant-7th type. In modes like Lydian and Dorian, V or vii can land on a maj7 or m7 chord and still carry dominant pull by degree.';
+            tableSection.appendChild(tableNote);
 
             const table = document.createElement('table');
             table.className = 'chord-table';

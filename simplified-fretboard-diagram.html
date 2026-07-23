@@ -548,6 +548,43 @@
             return null;
         }
 
+        // ---- Enharmonic spelling ----
+        // `notes` only has sharp names, but proper chord/scale spelling needs each
+        // note to use the correct LETTER (each of A-G exactly once per diatonic scale,
+        // and each chord tone a letter apart by thirds), with whatever accidental makes
+        // that letter match the target pitch class — e.g. C Dorian's b7 must be "Bb",
+        // not "A#", because scale degree 7 has to be some spelling of the letter B.
+        const NOTE_LETTERS = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
+        // Natural pitch class of each letter, using this file's own A=0 indexing.
+        const LETTER_PC = { A: 0, B: 2, C: 3, D: 5, E: 7, F: 8, G: 10 };
+        // Standard jazz convention: tritone subs are named on the flat side.
+        const FLAT_SPELLING = ['A', 'Bb', 'B', 'C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab'];
+
+        // Spells a target pitch class as (baseLetter + letterSteps) with whatever
+        // accidental is needed. Falls back to the sharp-only name for anything beyond
+        // a double sharp/flat (shouldn't happen for real diatonic/tertian spellings).
+        function spellByLetterStep(baseLetter, letterSteps, targetPc) {
+            const baseIdx = NOTE_LETTERS.indexOf(baseLetter);
+            const letter = NOTE_LETTERS[((baseIdx + letterSteps) % 7 + 7) % 7];
+            const naturalPc = LETTER_PC[letter];
+            const diff = (((targetPc - naturalPc) % 12) + 12) % 12;
+            const signed = diff > 6 ? diff - 12 : diff;
+            const accidentals = { '-2': 'bb', '-1': 'b', '0': '', '1': '#', '2': '##' };
+            const accidental = accidentals[String(signed)];
+            return accidental === undefined ? notes[targetPc] : letter + accidental;
+        }
+
+        // A scale degree's letter is always (tonic letter + degreeNumber - 1) steps on.
+        function spellScaleDegree(rootNoteName, degreeNumber, targetPc) {
+            return spellByLetterStep(rootNoteName[0], degreeNumber - 1, targetPc);
+        }
+
+        // Chord tones stack in thirds — each letter-step is 2 letters from the chord's
+        // own root (root, 3rd, 5th, 7th, 9th, 11th, 13th = roleIdx 0-6).
+        function spellChordTone(chordRootName, roleIdx, targetPc) {
+            return spellByLetterStep(chordRootName[0], roleIdx * 2, targetPc);
+        }
+
         // Chord-tone role by position within a chordQualities semitone array — every
         // entry is ordered root/3rd/5th/7th/9th/11th/13th (sus2/sus4 swap the 3rd slot
         // for a 2nd/4th but keep the same position), so index maps directly to role.
@@ -579,7 +616,8 @@
                 }
             }
 
-            const rootName = notes[degreeRootPc];
+            const degreeNumber = Number(scale[degreeIndex].replace(/[^0-9]/g, ''));
+            const rootName = spellScaleDegree(notes[rootNoteIndex], degreeNumber, degreeRootPc);
             const qualityName = qualityKey ? chordTypeGroups.flatMap(g => g.items).find(i => i.key === qualityKey).name : null;
             const chordSuffixes = { maj: '', min: 'm', dim: 'dim', aug: 'aug', sus2: 'sus2', sus4: 'sus4' };
             const suffix = qualityKey in chordSuffixes ? chordSuffixes[qualityKey] : qualityKey;
@@ -661,10 +699,19 @@
                     const mode0PCs = new Set(mode0Intervals.map(iv => (tonicPc + intervals[iv]) % 12));
                     if (!pcSetsEqual(mode0PCs, currentPCs)) continue;
                     const scaleKey = scale.join(',');
+                    // Anchor every mode's spelling off the current scale's own known root
+                    // letter, stepping the right number of letters forward/backward — e.g.
+                    // if the current scale is mode index 1 (Dorian), the mode at index 3
+                    // (Lydian) is 2 letters further on from the current root's letter.
+                    const currentModeIdx = modes.findIndex(m => m.intervals.join(',') === scaleKey);
+                    const currentRootLetter = notes[rootNoteIndex][0];
                     return modes.map((m, i) => {
                         const rootPc = (tonicPc + intervals[mode0Intervals[i]]) % 12;
                         const isCurrent = rootPc === rootNoteIndex && m.intervals.join(',') === scaleKey;
-                        return { name: m.name, root: notes[rootPc], isCurrent };
+                        const rootName = currentModeIdx >= 0
+                            ? spellByLetterStep(currentRootLetter, i - currentModeIdx, rootPc)
+                            : notes[rootPc];
+                        return { name: m.name, root: rootName, isCurrent };
                     });
                 }
             }
@@ -679,14 +726,16 @@
             for (let d = 1; d < scale.length; d++) {
                 const target = computeDiatonicChord(rootNoteIndex, scale, d);
                 if (!target.qualityKey || ['dim', 'dim7', 'm7b5'].includes(target.qualityKey)) continue;
+                // A secondary dominant sits a 5th (4 letter-steps) above its target's root.
                 const secDomRootPc = (target.rootPc + 7) % 12;
+                const secDomRootName = spellByLetterStep(target.rootName[0], 4, secDomRootPc);
                 const tritoneSubRootPc = (secDomRootPc + 6) % 12;
                 results.push({
                     targetRoman: buildRomanNumeral(scale[d], target.qualityKey),
                     targetLabel: target.label,
-                    secDomLabel: `${notes[secDomRootPc]}7`,
+                    secDomLabel: `${secDomRootName}7`,
                     secDomRootPc,
-                    tritoneSubLabel: `${notes[tritoneSubRootPc]}7`
+                    tritoneSubLabel: `${FLAT_SPELLING[tritoneSubRootPc]}7`
                 });
             }
             return results;
@@ -704,7 +753,7 @@
                 results.push({
                     forLabel: chord.label,
                     forRoman: buildRomanNumeral(intervalName, chord.qualityKey),
-                    subLabel: `${notes[subRootPc]}7`
+                    subLabel: `${FLAT_SPELLING[subRootPc]}7`
                 });
             });
             return results;
@@ -723,9 +772,10 @@
                 const gap = (chordB.rootPc - chordA.rootPc + 12) % 12;
                 if (gap !== 2) continue;
                 const passingRootPc = (chordA.rootPc + 1) % 12;
+                const passingRootName = spellByLetterStep(chordA.rootName[0], 0, passingRootPc);
                 results.push({
                     fromLabel: chordA.label,
-                    passingLabel: `${notes[passingRootPc]}dim7`,
+                    passingLabel: `${passingRootName}dim7`,
                     toLabel: chordB.label
                 });
             }
@@ -791,7 +841,7 @@
                 const noteNames = [...chord.pcs.keys()]
                     .map(pc => ({ pc, idx: chord.pcs.get(pc) }))
                     .sort((a, b) => a.idx - b.idx)
-                    .map(x => notes[x.pc])
+                    .map(x => spellChordTone(chord.rootName, x.idx, x.pc))
                     .join('–');
 
                 const tr = document.createElement('tr');

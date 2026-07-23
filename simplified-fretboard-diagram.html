@@ -680,20 +680,22 @@
                 const target = computeDiatonicChord(rootNoteIndex, scale, d);
                 if (!target.qualityKey || ['dim', 'dim7', 'm7b5'].includes(target.qualityKey)) continue;
                 const secDomRootPc = (target.rootPc + 7) % 12;
+                const tritoneSubRootPc = (secDomRootPc + 6) % 12;
                 results.push({
                     targetRoman: buildRomanNumeral(scale[d], target.qualityKey),
                     targetLabel: target.label,
                     secDomLabel: `${notes[secDomRootPc]}7`,
-                    secDomRootPc
+                    secDomRootPc,
+                    tritoneSubLabel: `${notes[tritoneSubRootPc]}7`
                 });
             }
             return results;
         }
 
         // Tritone subs replace a dominant 7th chord with the dominant 7th a tritone away
-        // (they share the same 3rd and 7th, just swapped) — covers both the scale's own
-        // diatonic dominant chord(s) and every secondary dominant computed above.
-        function computeTritoneSubs(rootNoteIndex, scale, secondaryDominants) {
+        // (they share the same 3rd and 7th, just swapped). Secondary dominants' tritone
+        // subs are shown inline in the Secondary Dominants table instead of here.
+        function computeTritoneSubs(rootNoteIndex, scale) {
             const results = [];
             scale.forEach((intervalName, d) => {
                 const chord = computeDiatonicChord(rootNoteIndex, scale, d);
@@ -703,14 +705,6 @@
                     forLabel: chord.label,
                     forRoman: buildRomanNumeral(intervalName, chord.qualityKey),
                     subLabel: `${notes[subRootPc]}7`
-                });
-            });
-            secondaryDominants.forEach(sd => {
-                const subRootPc = (sd.secDomRootPc + 6) % 12;
-                results.push({
-                    forLabel: sd.secDomLabel,
-                    forRoman: `V7/${sd.targetRoman}`,
-                    subLabel: `${notes[subRootPc]}7 (subV7/${sd.targetRoman})`
                 });
             });
             return results;
@@ -827,13 +821,14 @@
 
                 const secTable = document.createElement('table');
                 secTable.className = 'chord-table';
-                secTable.innerHTML = '<thead><tr><th>Chord</th><th>Resolves To</th></tr></thead>';
+                secTable.innerHTML = '<thead><tr><th>Chord</th><th>Resolves To</th><th>Tritone Sub</th></tr></thead>';
                 const secBody = document.createElement('tbody');
                 secondaryDominants.forEach(sd => {
                     const tr = document.createElement('tr');
                     tr.innerHTML = `
                         <td><span class="chord-name">${sd.secDomLabel}</span> <span class="roman-numeral">(V7/${sd.targetRoman})</span></td>
                         <td><span class="chord-name">${sd.targetLabel}</span> <span class="roman-numeral">(${sd.targetRoman})</span></td>
+                        <td><span class="chord-name">${sd.tritoneSubLabel}</span></td>
                     `;
                     secBody.appendChild(tr);
                 });
@@ -842,15 +837,15 @@
                 output.appendChild(secSection);
             }
 
-            // ---- Tritone substitutions ----
-            const tritoneSubs = computeTritoneSubs(rootNoteIndex, scale, secondaryDominants);
+            // ---- Tritone substitutions (for the scale's own diatonic dominant chord) ----
+            const tritoneSubs = computeTritoneSubs(rootNoteIndex, scale);
             if (tritoneSubs.length) {
                 const triSection = document.createElement('div');
                 triSection.className = 'harmony-section';
                 triSection.innerHTML = '<h2>Tritone Substitutions</h2>';
                 const triNote = document.createElement('p');
                 triNote.className = 'section-note';
-                triNote.textContent = 'Swap any dominant 7th (including the secondary dominants above) for the dominant 7th a tritone away — same 3rd and 7th, smoother bass movement.';
+                triNote.textContent = 'Swap the scale\'s own dominant 7th chord for the dominant 7th a tritone away — same 3rd and 7th, smoother bass movement. (Secondary dominants\' tritone subs are in the table above.)';
                 triSection.appendChild(triNote);
 
                 const triTable = document.createElement('table');

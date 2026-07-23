@@ -139,10 +139,70 @@
             background: #eee; font-size: 14px; cursor: pointer; border-bottom: none;
         }
         .instrument-tab.active { background: #fff; border-color: #111; font-weight: bold; box-shadow: 0 2px 0 #fff; }
+
+        .view-tabs { display: flex; gap: 8px; margin-bottom: 20px; }
+        .view-tab {
+            padding: 10px 20px; border: 2px solid #333; border-radius: 8px;
+            background: #eee; font-size: 16px; font-weight: bold; cursor: pointer;
+        }
+        .view-tab.active { background: #333; color: #fff; }
+        .view.hidden { display: none; }
+
+        /* ---- Harmony tab ---- */
+        .harmony-intro { max-width: 720px; color: #444; line-height: 1.5; }
+        .harmony-section { margin-top: 32px; }
+        .harmony-section h2 { margin-bottom: 6px; }
+        .harmony-section .section-note { color: #666; font-size: 13px; margin-bottom: 14px; max-width: 720px; line-height: 1.5; }
+
+        .chord-table { width: 100%; max-width: 900px; border-collapse: collapse; font-size: 16px; }
+        .chord-table th {
+            text-align: left; padding: 10px 14px; border-bottom: 2px solid #333;
+            font-size: 13px; text-transform: uppercase; letter-spacing: 0.04em; color: #555;
+        }
+        .chord-table td { padding: 12px 14px; border-bottom: 1px solid #ddd; vertical-align: middle; }
+        .chord-table tr:hover td { background: #fafafa; }
+        .degree-badge {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 30px; height: 30px; border-radius: 50%; font-weight: bold; font-size: 13px;
+            border: 1px solid #33333355; color: #222;
+        }
+        .roman-numeral { font-size: 20px; font-weight: bold; font-family: Georgia, serif; }
+        .chord-name { font-size: 22px; font-weight: bold; }
+        .chord-notes { color: #555; font-family: "Courier New", monospace; font-size: 15px; }
+        .function-pill {
+            display: inline-block; padding: 3px 10px; border-radius: 999px;
+            font-size: 12px; font-weight: bold; color: #fff;
+        }
+        .function-tonic { background: #2e7d32; }
+        .function-subdominant { background: #1565c0; }
+        .function-dominant { background: #c62828; }
+        .function-unstable { background: #6a1b9a; }
+
+        .relative-modes-list { display: flex; flex-wrap: wrap; gap: 10px; max-width: 900px; }
+        .relative-mode-chip {
+            padding: 8px 14px; border-radius: 8px; border: 1px solid #ccc; background: #fafafa;
+            font-size: 14px;
+        }
+        .relative-mode-chip.current { border-color: #111; background: #fff4d6; font-weight: bold; }
+
+        .loop-list { display: flex; flex-direction: column; gap: 10px; max-width: 700px; }
+        .loop-item {
+            display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+            padding: 12px 16px; border: 1px solid #ddd; border-radius: 8px; background: #fafafa;
+        }
+        .loop-chord { font-size: 18px; font-weight: bold; }
+        .loop-arrow { color: #999; }
+        .harmony-not-applicable { color: #666; font-style: italic; max-width: 700px; }
     </style>
 </head>
 <body>
     <h1>Customizable Fretboard Diagram</h1>
+    <div class="view-tabs">
+        <button type="button" class="view-tab active" data-view="fretboard">🎼 Fretboard</button>
+        <button type="button" class="view-tab" data-view="harmony">🎹 Harmony</button>
+    </div>
+
+    <div id="view-fretboard" class="view">
     <div class="instrument-tabs">
         <button type="button" class="instrument-tab active" data-instrument="guitar">🎸 Guitar (6-String)</button>
         <button type="button" class="instrument-tab" data-instrument="banjo">🪕 Banjo (5-String)</button>
@@ -211,6 +271,22 @@
             <span class="now-playing" id="now-playing">Stopped</span>
         </div>
         <div class="bars-grid" id="bars-grid"></div>
+    </div>
+    </div>
+
+    <div id="view-harmony" class="view hidden">
+        <p class="harmony-intro">
+            Pick a key and scale below to see its diatonic chords, function, and related
+            modes — built for glancing at while you noodle on piano and sketch progressions.
+            This is fully independent from the Fretboard tab's settings.
+        </p>
+        <div class="controls">
+            <label for="harmony-key-select">Select Key:</label>
+            <select id="harmony-key-select"></select>
+            <label for="harmony-scale-select">Select Scale:</label>
+            <select id="harmony-scale-select"></select>
+        </div>
+        <div id="harmony-output"></div>
     </div>
 
     <script>
@@ -521,6 +597,210 @@
                 if (!map.has(pc)) map.set(pc, idx);
             });
             return map;
+        }
+
+        // ==================== Harmony tab ====================
+        // Fully independent of the Fretboard tab's state — reads only its own
+        // harmony-key-select / harmony-scale-select controls.
+
+        const romanBase = { 1: 'I', 2: 'II', 3: 'III', 4: 'IV', 5: 'V', 6: 'VI', 7: 'VII' };
+        const minorQualities = new Set(['min', 'm7', 'mMaj7', 'm6', 'm9', 'm11', 'm13']);
+        const augQualities = new Set(['aug', 'maj7#5', '7#5']);
+
+        // Builds a roman numeral like "♭III", "iv°", "vø" from a scale-degree interval
+        // name (e.g. "b3") and the chord quality sitting on it.
+        function buildRomanNumeral(intervalName, qualityKey) {
+            const degreeDigit = intervalName.replace(/[^0-9]/g, '');
+            const accidental = intervalName.startsWith('b') ? '♭' : intervalName.startsWith('#') ? '♯' : '';
+            const base = romanBase[degreeDigit] || '?';
+            if (!qualityKey) return `${accidental}${base}?`;
+            if (qualityKey === 'dim7') return `${accidental}${base.toLowerCase()}°7`;
+            if (qualityKey === 'dim') return `${accidental}${base.toLowerCase()}°`;
+            if (qualityKey === 'm7b5') return `${accidental}${base.toLowerCase()}ø`;
+            if (minorQualities.has(qualityKey)) return `${accidental}${base.toLowerCase()}`;
+            if (augQualities.has(qualityKey)) return `${accidental}${base}+`;
+            return `${accidental}${base}`;
+        }
+
+        // Standard tonal-function family by scale-degree position (T: I, iii, vi;
+        // S: ii, IV; D: V, vii), with diminished/half-diminished chords always called
+        // out as "Unstable" regardless of position since they function as tension chords.
+        function functionLabelForDegree(degreeNumber, qualityKey) {
+            if (qualityKey === 'dim' || qualityKey === 'dim7' || qualityKey === 'm7b5') {
+                return { label: 'Unstable', cls: 'function-unstable' };
+            }
+            const map = {
+                1: { label: 'Tonic', cls: 'function-tonic' },
+                2: { label: 'Subdominant', cls: 'function-subdominant' },
+                3: { label: 'Tonic', cls: 'function-tonic' },
+                4: { label: 'Subdominant', cls: 'function-subdominant' },
+                5: { label: 'Dominant', cls: 'function-dominant' },
+                6: { label: 'Tonic', cls: 'function-tonic' },
+                7: { label: 'Dominant', cls: 'function-dominant' }
+            };
+            return map[degreeNumber] || { label: '—', cls: '' };
+        }
+
+        function pcSetsEqual(a, b) {
+            if (a.size !== b.size) return false;
+            for (const pc of a) if (!b.has(pc)) return false;
+            return true;
+        }
+
+        // For a 7-note scale, finds the other diatonic modes that share the exact same
+        // 7 pitch classes (i.e. the same key signature) within the same mode family
+        // (major-scale modes, melodic-minor modes, or harmonic-minor modes).
+        function findRelativeModes(rootNoteIndex, scale) {
+            if (scale.length !== 7) return null;
+            const currentPCs = new Set(scale.map(iv => (rootNoteIndex + intervals[iv]) % 12));
+            const families = [scaleGroups[0].items, scaleGroups[2].items, scaleGroups[3].items];
+
+            for (const modes of families) {
+                const mode0Intervals = modes[0].intervals;
+                for (let tonicPc = 0; tonicPc < 12; tonicPc++) {
+                    const mode0PCs = new Set(mode0Intervals.map(iv => (tonicPc + intervals[iv]) % 12));
+                    if (!pcSetsEqual(mode0PCs, currentPCs)) continue;
+                    const scaleKey = scale.join(',');
+                    return modes.map((m, i) => {
+                        const rootPc = (tonicPc + intervals[mode0Intervals[i]]) % 12;
+                        const isCurrent = rootPc === rootNoteIndex && m.intervals.join(',') === scaleKey;
+                        return { name: m.name, root: notes[rootPc], isCurrent };
+                    });
+                }
+            }
+            return null;
+        }
+
+        function initializeHarmonySelects() {
+            const keySelect = document.getElementById('harmony-key-select');
+            notes.forEach(note => {
+                const option = document.createElement('option');
+                option.value = note;
+                option.textContent = note;
+                keySelect.appendChild(option);
+            });
+
+            const scaleSelect = document.getElementById('harmony-scale-select');
+            scaleGroups.forEach(group => {
+                const optgroup = document.createElement('optgroup');
+                optgroup.label = group.group;
+                group.items.forEach(item => {
+                    const option = document.createElement('option');
+                    option.value = item.key;
+                    option.textContent = item.name;
+                    optgroup.appendChild(option);
+                });
+                scaleSelect.appendChild(optgroup);
+            });
+        }
+
+        function renderHarmonyTab() {
+            const key = document.getElementById('harmony-key-select').value;
+            const scaleKey = document.getElementById('harmony-scale-select').value;
+            const rootNoteIndex = notes.indexOf(key);
+            const scale = scales[scaleKey];
+            const output = document.getElementById('harmony-output');
+            output.innerHTML = '';
+
+            if (scale.length !== 7) {
+                const msg = document.createElement('p');
+                msg.className = 'harmony-not-applicable';
+                msg.textContent = 'Diatonic chords, function, and related modes are only defined for 7-note scales. Pick a 7-note scale (any mode of major, melodic minor, or harmonic minor, or the pentatonic/blues scales) to see the chart.';
+                output.appendChild(msg);
+                return;
+            }
+
+            // ---- Diatonic chords table ----
+            const tableSection = document.createElement('div');
+            tableSection.className = 'harmony-section';
+            const tableHeading = document.createElement('h2');
+            tableHeading.textContent = `Diatonic Chords in ${key} ${document.getElementById('harmony-scale-select').selectedOptions[0].textContent}`;
+            tableSection.appendChild(tableHeading);
+
+            const table = document.createElement('table');
+            table.className = 'chord-table';
+            table.innerHTML = '<thead><tr><th>Degree</th><th>Roman Numeral</th><th>Chord</th><th>Notes</th><th>Function</th></tr></thead>';
+            const tbody = document.createElement('tbody');
+
+            scale.forEach((intervalName, degreeIndex) => {
+                const chord = computeDiatonicChord(rootNoteIndex, scale, degreeIndex);
+                const degreeNumber = Number(intervalName.replace(/[^0-9]/g, ''));
+                const roman = buildRomanNumeral(intervalName, chord.qualityKey);
+                const fn = functionLabelForDegree(degreeNumber, chord.qualityKey);
+                const noteNames = [...chord.pcs.keys()]
+                    .map(pc => ({ pc, idx: chord.pcs.get(pc) }))
+                    .sort((a, b) => a.idx - b.idx)
+                    .map(x => notes[x.pc])
+                    .join('–');
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><span class="degree-badge interval-${degreeIndex + 1}">${intervalName}</span></td>
+                    <td><span class="roman-numeral">${roman}</span></td>
+                    <td><span class="chord-name">${chord.label}</span></td>
+                    <td><span class="chord-notes">${noteNames}</span></td>
+                    <td><span class="function-pill ${fn.cls}">${fn.label}</span></td>
+                `;
+                tbody.appendChild(tr);
+            });
+            table.appendChild(tbody);
+            tableSection.appendChild(table);
+            output.appendChild(tableSection);
+
+            // ---- Related modes (same 7 notes, different tonic) ----
+            const relatives = findRelativeModes(rootNoteIndex, scale);
+            if (relatives) {
+                const relSection = document.createElement('div');
+                relSection.className = 'harmony-section';
+                const relHeading = document.createElement('h2');
+                relHeading.textContent = 'Shares These Notes With';
+                relSection.appendChild(relHeading);
+                const relNote = document.createElement('p');
+                relNote.className = 'section-note';
+                relNote.textContent = 'Same 7 notes, different tonic — freely borrow chords from these modes without leaving the key signature.';
+                relSection.appendChild(relNote);
+
+                const list = document.createElement('div');
+                list.className = 'relative-modes-list';
+                relatives.forEach(r => {
+                    const chip = document.createElement('span');
+                    chip.className = 'relative-mode-chip' + (r.isCurrent ? ' current' : '');
+                    chip.textContent = `${r.root} ${r.name}${r.isCurrent ? ' (current)' : ''}`;
+                    list.appendChild(chip);
+                });
+                relSection.appendChild(list);
+                output.appendChild(relSection);
+            }
+
+            // ---- Suggested loops, built from the actual chords at each functional slot ----
+            const loopSection = document.createElement('div');
+            loopSection.className = 'harmony-section';
+            const loopHeading = document.createElement('h2');
+            loopHeading.textContent = 'Loops to Try';
+            loopSection.appendChild(loopHeading);
+            const loopNote = document.createElement('p');
+            loopNote.className = 'section-note';
+            loopNote.textContent = 'Generic tonic/subdominant/dominant shapes filled in with this scale\'s actual chords — a starting point, not a rulebook.';
+            loopSection.appendChild(loopNote);
+
+            const chordAt = degreeIndex => {
+                const c = computeDiatonicChord(rootNoteIndex, scale, degreeIndex);
+                return { roman: buildRomanNumeral(scale[degreeIndex], c.qualityKey), label: c.label };
+            };
+            const loopDegreeSequences = [[0, 3], [0, 6, 3], [0, 1], [0, 4, 6, 3]];
+            const loopList = document.createElement('div');
+            loopList.className = 'loop-list';
+            loopDegreeSequences.forEach(seq => {
+                const chords = seq.map(chordAt);
+                const item = document.createElement('div');
+                item.className = 'loop-item';
+                item.innerHTML = chords
+                    .map(c => `<span class="loop-chord">${c.roman} <small>(${c.label})</small></span>`)
+                    .join('<span class="loop-arrow">→</span>');
+                loopList.appendChild(item);
+            });
+            loopSection.appendChild(loopList);
+            output.appendChild(loopSection);
         }
 
         // Diatonic chord buttons live only on Fretboard 1 (index 0).
@@ -941,6 +1221,28 @@
 
             document.querySelectorAll('.instrument-tab').forEach(btn => {
                 btn.addEventListener('click', () => switchInstrument(btn.dataset.instrument));
+            });
+
+            // ---- Harmony tab: fully independent of the Fretboard tab's state ----
+            initializeHarmonySelects();
+            renderHarmonyTab();
+            document.getElementById('harmony-key-select').addEventListener('change', renderHarmonyTab);
+            document.getElementById('harmony-scale-select').addEventListener('change', renderHarmonyTab);
+
+            document.querySelectorAll('.view-tab').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const view = btn.dataset.view;
+                    document.querySelectorAll('.view-tab').forEach(b => b.classList.toggle('active', b === btn));
+                    document.getElementById('view-fretboard').classList.toggle('hidden', view !== 'fretboard');
+                    document.getElementById('view-harmony').classList.toggle('hidden', view !== 'harmony');
+                    if (view === 'harmony') {
+                        // One-time-per-visit copy of the Fretboard tab's current key/scale as a
+                        // helpful starting point — after this, the two stay fully independent.
+                        document.getElementById('harmony-key-select').value = document.getElementById('key-select').value;
+                        document.getElementById('harmony-scale-select').value = document.getElementById('scale-type-select').value;
+                        renderHarmonyTab();
+                    }
+                });
             });
 
             const tuningControls = document.getElementById('tuning-controls');

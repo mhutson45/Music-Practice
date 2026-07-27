@@ -194,43 +194,71 @@
         .loop-arrow { color: #999; }
         .harmony-not-applicable { color: #666; font-style: italic; max-width: 700px; }
 
-        /* ---- Chord Analyzer ---- */
+        /* ---- Chord Analyzer (dark, oolimo-style horizontal board) ---- */
         .analyzer-card {
-            display: inline-block; margin-top: 24px; padding: 28px 36px; border: 2px solid #222;
-            border-radius: 12px; background: #fff;
+            display: inline-block; margin-top: 24px; padding: 24px 30px;
+            border-radius: 14px; background: #14130e; color: #eee;
         }
-        .analyzer-chord-name { font-size: 44px; font-weight: bold; line-height: 1.1; }
-        .analyzer-chord-notes { font-size: 15px; color: #555; font-family: "Courier New", monospace; margin-top: 4px; }
-        .analyzer-tuning-label { font-size: 13px; color: #777; margin-top: 6px; margin-bottom: 20px; }
-        .analyzer-diagram { position: relative; display: flex; }
-        .analyzer-string-col { display: flex; flex-direction: column; align-items: center; }
-        .analyzer-string-toggles { display: flex; gap: 4px; margin-bottom: 8px; }
-        .analyzer-toggle-btn {
-            width: 20px; height: 20px; border-radius: 50%; border: 1px solid #999; background: #fff;
-            font-size: 11px; font-weight: bold; line-height: 1; cursor: pointer; padding: 0;
-            display: flex; align-items: center; justify-content: center;
+        .analyzer-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 48px; margin-bottom: 22px; }
+        .analyzer-chord-name { font-size: 40px; font-weight: bold; color: #fff; line-height: 1.1; min-width: 140px; }
+        .analyzer-chord-notes { font-size: 14px; color: #b7b29b; font-family: "Courier New", monospace; margin-top: 6px; }
+        .analyzer-header-right { display: flex; align-items: flex-start; gap: 20px; text-align: right; }
+        .analyzer-tuning-letters { font-size: 19px; letter-spacing: 7px; color: #ece5c7; font-weight: 600; }
+        .analyzer-tuning-name { font-size: 13px; color: #a9a389; margin-top: 3px; }
+        .analyzer-reset-icon {
+            background: none; border: none; color: #a9b055; font-size: 28px;
+            cursor: pointer; line-height: 1; padding: 0; margin: 0;
         }
-        .analyzer-toggle-btn.active-open { background: #2e7d32; color: #fff; border-color: #2e7d32; }
-        .analyzer-toggle-btn.active-mute { background: #c62828; color: #fff; border-color: #c62828; }
-        .analyzer-fret-cell {
-            width: 46px; height: 46px; border-right: 1px solid #333; border-bottom: 1px solid #333;
-            position: relative; cursor: pointer; flex-shrink: 0;
+        .analyzer-board-wrap { position: relative; overflow-x: auto; }
+        .analyzer-cell { position: relative; }
+        .analyzer-cell.fret-cell { border-right: 1px solid #57523b; cursor: pointer; }
+        .analyzer-cell.fret-cell.first-fret { border-left: 4px solid #cfc8a6; }
+        .analyzer-cell.fret-cell .string-line {
+            position: absolute; left: 0; right: 0; top: 50%; height: 1px; background: #8d8768; pointer-events: none;
         }
-        .analyzer-string-col:first-child .analyzer-fret-cell { border-left: 2px solid #333; }
-        .analyzer-fret-cell.nut-row { border-top: 4px solid #222; }
-        .analyzer-fret-cell.non-nut-row { border-top: 1px solid #333; }
-        .analyzer-fret-dot {
+        .analyzer-cell.fret-cell.muted-row .string-line { background: #3d3a2c; }
+        .analyzer-cell.fret-cell.missing { cursor: default; border-right-color: transparent; }
+        .analyzer-cell.open-cell { cursor: pointer; }
+        .analyzer-marker {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            width: 30px; height: 30px; border-radius: 50%; background: #222; color: #fff;
-            display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold;
+            width: 27px; height: 27px; display: flex; align-items: center; justify-content: center;
+            font-size: 12px; font-weight: bold; z-index: 2; box-sizing: border-box; pointer-events: none;
         }
-        .analyzer-fret-labels { display: flex; flex-direction: column; margin-right: 4px; }
-        .analyzer-fret-label {
-            height: 46px; display: flex; align-items: center; justify-content: center;
-            font-size: 12px; color: #888; width: 26px;
+        .analyzer-marker.fretted { border-radius: 50%; color: #14130e; }
+        .analyzer-marker.fretted.is-root { border-radius: 6px; }
+        .analyzer-marker.open-marker { border-radius: 50%; border: 2px solid; background: transparent; }
+        .analyzer-marker.open-marker.is-root { border-radius: 6px; }
+        .analyzer-marker.mute-marker { color: #99917a; font-size: 15px; }
+        .analyzer-note-letter {
+            position: absolute; top: 50%; transform: translateY(-50%); left: 12px;
+            font-size: 14px; font-weight: bold;
         }
-        .analyzer-fret-labels .analyzer-toggle-spacer { height: 28px; margin-bottom: 8px; }
-        .analyzer-string-name { font-size: 12px; color: #666; margin-top: 8px; }
+        .analyzer-fret-number { display: flex; align-items: center; justify-content: center; font-size: 12px; color: #9a947c; }
+        .analyzer-inlay-dot { position: absolute; width: 9px; height: 9px; border-radius: 50%; background: #4c462f; z-index: 1; pointer-events: none; }
+
+        .analyzer-panel {
+            margin-top: 20px; padding: 20px 26px; border-radius: 14px;
+            background: #14130e; color: #ddd; max-width: 900px;
+        }
+        .analyzer-panel-title { font-size: 20px; color: #7fb2b8; border-bottom: 1px solid #3a382c; padding-bottom: 8px; margin: 0 0 16px 0; font-weight: normal; }
+        .analyzer-names { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+        .analyzer-name-btn {
+            text-align: left; padding: 12px 16px; font-size: 18px; border-radius: 8px;
+            border: 1px solid #3c392b; background: #1d1b13; color: #cfcab2; cursor: pointer; margin-right: 0;
+        }
+        .analyzer-name-btn.selected { border-color: #b9c145; color: #fff; }
+        .analyzer-name-btn small { color: #8d8768; font-size: 12px; margin-left: 8px; }
+
+        .analyzer-breakdown { display: flex; flex-direction: column; gap: 8px; }
+        .bd-row { display: grid; grid-template-columns: 160px 140px 1fr; align-items: center; gap: 16px; }
+        .bd-group-label { font-size: 13px; color: #9a947c; }
+        .bd-note-box {
+            height: 44px; border: 2px solid #35332a; border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 20px; font-weight: bold; color: #fff; background: #191811;
+        }
+        .bd-labels { display: flex; gap: 18px; font-size: 14px; color: #6d6852; flex-wrap: wrap; align-items: center; }
+        .bd-labels .active { font-weight: bold; }
     </style>
 </head>
 <body>
@@ -340,17 +368,34 @@
         <div class="controls">
             <label for="analyzer-tuning-preset">Tuning:</label>
             <select id="analyzer-tuning-preset"></select>
-            <label for="analyzer-start-fret">Start Fret:</label>
-            <input type="number" id="analyzer-start-fret" value="1" min="0" max="19" style="width: 60px;">
-            <button type="button" id="analyzer-reset-btn">Reset</button>
         </div>
         <div id="analyzer-tuning-controls" class="tuning-controls hidden"></div>
 
         <div id="analyzer-card" class="analyzer-card">
-            <div id="analyzer-chord-name" class="analyzer-chord-name">—</div>
-            <div id="analyzer-chord-notes" class="analyzer-chord-notes"></div>
-            <div id="analyzer-tuning-label" class="analyzer-tuning-label"></div>
-            <div id="analyzer-diagram" class="analyzer-diagram"></div>
+            <div class="analyzer-header">
+                <div>
+                    <div id="analyzer-chord-name" class="analyzer-chord-name">—</div>
+                    <div id="analyzer-chord-notes" class="analyzer-chord-notes"></div>
+                </div>
+                <div class="analyzer-header-right">
+                    <div>
+                        <div id="analyzer-tuning-letters" class="analyzer-tuning-letters"></div>
+                        <div id="analyzer-tuning-name" class="analyzer-tuning-name"></div>
+                    </div>
+                    <button type="button" id="analyzer-reset-btn" class="analyzer-reset-icon" title="Reset all strings to open">↺</button>
+                </div>
+            </div>
+            <div id="analyzer-board" class="analyzer-board-wrap"></div>
+        </div>
+
+        <div class="analyzer-panel">
+            <h2 class="analyzer-panel-title">Possible Chord Names</h2>
+            <div id="analyzer-names" class="analyzer-names"></div>
+        </div>
+
+        <div class="analyzer-panel">
+            <h2 class="analyzer-panel-title">Chord Tones and Chord Intervals</h2>
+            <div id="analyzer-breakdown" class="analyzer-breakdown"></div>
         </div>
     </div>
 
@@ -543,6 +588,7 @@
                     { name: "Double Drop D", notesLowToHigh: ["D", "A", "D", "G", "B", "D"] },
                     { name: "Open C", notesLowToHigh: ["C", "G", "C", "G", "C", "E"] },
                     { name: "Open A", notesLowToHigh: ["E", "A", "C#", "E", "A", "E"] },
+                    { name: "CGCGCD (Open Csus2)", notesLowToHigh: ["C", "G", "C", "G", "C", "D"] },
                     { name: "Custom", notesLowToHigh: null }
                 ]
             },
@@ -1518,9 +1564,28 @@
         let analyzerInstrument = 'guitar';
         let analyzerTuning = analyzerInstruments.guitar.defaultTuning.slice();
         let analyzerStringStatus = analyzerTuning.map(() => ({ status: 'open', fret: 0 }));
+        let analyzerInterpretations = [];
+        let analyzerSelectedIdx = 0;
+        const ANALYZER_FRETS = 15;
+        // Board rows top->bottom as indices into analyzerTuning (highest string on top,
+        // like a standard horizontal chord chart; banjo shows 1st..4th then the 5th).
+        const analyzerDisplayOrders = { guitar: [5, 4, 3, 2, 1, 0], banjo: [3, 2, 1, 0, 4] };
 
         function resetAnalyzerStrings() {
             analyzerStringStatus = analyzerTuning.map(() => ({ status: 'open', fret: 0 }));
+            analyzerSelectedIdx = 0;
+        }
+
+        // Sounding pitch class of a string, or null if muted. A short string (banjo 5th)
+        // physically starts at its min fret, so fretting it at fret f raises the OPEN
+        // pitch by (f - minFret) semitones — not by f.
+        function analyzerSoundingPc(stringIndex) {
+            const s = analyzerStringStatus[stringIndex];
+            if (s.status === 'muted') return null;
+            const openPc = notes.indexOf(analyzerTuning[stringIndex]);
+            if (s.status === 'open') return openPc;
+            const minFret = analyzerInstruments[analyzerInstrument].stringMinFrets[stringIndex] || 0;
+            return (openPc + (s.fret - minFret) + 12) % 12;
         }
 
         function populateAnalyzerTuningPresetSelect() {
@@ -1573,6 +1638,7 @@
                 select.addEventListener('change', e => {
                     analyzerTuning[stringIndex] = e.target.value;
                     document.getElementById('analyzer-tuning-preset').value = analyzerInstruments[analyzerInstrument].tuningPresets.length - 1;
+                    analyzerSelectedIdx = 0;
                     renderAnalyzerDiagram();
                 });
                 stringContainer.appendChild(select);
@@ -1604,175 +1670,340 @@
             analyzerStringStatus[stringIndex] = (current.status === 'fretted' && current.fret === fret)
                 ? { status: 'open', fret: 0 }
                 : { status: 'fretted', fret };
+            analyzerSelectedIdx = 0;
             renderAnalyzerDiagram();
         }
 
-        function setAnalyzerStringOpenOrMute(stringIndex, status) {
-            analyzerStringStatus[stringIndex] = status === 'open' ? { status: 'open', fret: 0 } : { status: 'muted', fret: null };
+        // Clicking the open-position cell toggles the string between open and muted.
+        function toggleAnalyzerStringOpenMute(stringIndex) {
+            const current = analyzerStringStatus[stringIndex];
+            analyzerStringStatus[stringIndex] = current.status === 'muted'
+                ? { status: 'open', fret: 0 }
+                : { status: 'muted', fret: null };
+            analyzerSelectedIdx = 0;
             renderAnalyzerDiagram();
         }
 
-        // Identifies the chord from whatever's fretted, handling partial voicings
+        // Finds EVERY chord interpretation of what's fretted, handling partial voicings
         // (missing chord tones, e.g. no 5th) and slash chords (bass note != root) —
         // tries every played note as a candidate root against the full chord-type
-        // library, picking the fewest-omitted-tones match, preferring the actual
-        // bass note as root on ties.
-        function identifyPlayedChord(tuning, statuses) {
+        // library, sorted by fewest omitted tones, preferring the actual bass note as
+        // root on ties. The whole sorted list feeds the "Possible Chord Names" panel.
+        function computeChordInterpretations() {
             const playedPcs = [];
             let bassPc = null;
-            statuses.forEach((s, i) => {
-                if (s.status === 'muted') return;
-                const openPc = notes.indexOf(tuning[i]);
-                const pc = s.status === 'open' ? openPc : (openPc + s.fret) % 12;
+            analyzerTuning.forEach((_, i) => {
+                const pc = analyzerSoundingPc(i);
+                if (pc === null) return;
                 playedPcs.push(pc);
                 if (bassPc === null) bassPc = pc;
             });
-
-            if (playedPcs.length === 0) return { name: '—', notesText: '' };
-
             const uniquePcs = [...new Set(playedPcs)];
-            if (uniquePcs.length === 1) {
-                const name = CHORD_ROOT_SPELLING[uniquePcs[0]];
-                return { name: `${name} (single note)`, notesText: name };
-            }
+            if (uniquePcs.length < 2) return { uniquePcs, bassPc, list: [] };
 
             const qualityPriority = {};
             let p = 0;
             chordTypeGroups.forEach(g => g.items.forEach(item => { qualityPriority[item.key] = p++; }));
 
-            let best = null;
+            const list = [];
             uniquePcs.forEach(rootPc => {
                 const relative = new Set(uniquePcs.map(pc => (pc - rootPc + 12) % 12));
                 Object.keys(chordQualities).forEach(qualityKey => {
-                    const qualitySet = new Set(chordQualities[qualityKey]);
+                    const q = chordQualities[qualityKey];
+                    const qualitySet = new Set(q);
                     for (const r of relative) if (!qualitySet.has(r)) return;
-                    const score = chordQualities[qualityKey].length - relative.size;
-                    const isBassRoot = rootPc === bassPc;
-                    const candidate = { rootPc, qualityKey, score, isBassRoot };
-                    const better = !best
-                        || candidate.score < best.score
-                        || (candidate.score === best.score && candidate.isBassRoot && !best.isBassRoot)
-                        || (candidate.score === best.score && candidate.isBassRoot === best.isBassRoot && qualityPriority[qualityKey] < qualityPriority[best.qualityKey]);
-                    if (better) best = candidate;
+                    const omittedRoles = [];
+                    q.forEach((iv, idx) => { if (!relative.has(iv)) omittedRoles.push(chordToneRoleNames[idx] || `#${idx + 1}`); });
+                    const rootName = CHORD_ROOT_SPELLING[rootPc];
+                    let name = `${rootName}${chordSuffixFor(qualityKey)}`;
+                    if (rootPc !== bassPc) name += `/${CHORD_ROOT_SPELLING[bassPc]}`;
+                    list.push({
+                        rootPc, qualityKey, rootName, name, omittedRoles,
+                        score: omittedRoles.length, isBassRoot: rootPc === bassPc,
+                        prio: qualityPriority[qualityKey]
+                    });
                 });
             });
+            // For each candidate root, keep only its closest matches — e.g. when C-E-G is
+            // played, "C" (exact) survives but "Cmaj7 (no 7th)" and friends are redundant.
+            const minScoreByRoot = {};
+            list.forEach(c => {
+                if (minScoreByRoot[c.rootPc] === undefined || c.score < minScoreByRoot[c.rootPc]) minScoreByRoot[c.rootPc] = c.score;
+            });
+            // Also drop far-fetched readings needing 3+ omitted tones.
+            const filtered = list.filter(c => c.score === minScoreByRoot[c.rootPc] && c.score <= 2);
+            filtered.sort((a, b) => a.score - b.score || (b.isBassRoot - a.isBassRoot) || a.prio - b.prio);
+            list.length = 0;
+            list.push(...filtered);
 
-            if (!best) {
-                if (uniquePcs.length === 2) {
-                    const rootPc = bassPc;
-                    const otherPc = uniquePcs.find(pc => pc !== rootPc);
-                    const rel = (otherPc - rootPc + 12) % 12;
-                    const rootName = CHORD_ROOT_SPELLING[rootPc];
-                    const label = rel === 7 ? `${rootName}5` : `${rootName} + ${CHORD_ROOT_SPELLING[otherPc]}`;
-                    return { name: label, notesText: uniquePcs.map(pc => CHORD_ROOT_SPELLING[pc]).join(', ') };
+            // Dyad fallback (e.g. power chord) when nothing in the library matches.
+            if (!list.length && uniquePcs.length === 2) {
+                const otherPc = uniquePcs.find(pc => pc !== bassPc);
+                if ((otherPc - bassPc + 12) % 12 === 7) {
+                    const rootName = CHORD_ROOT_SPELLING[bassPc];
+                    list.push({ rootPc: bassPc, qualityKey: null, rootName, name: `${rootName}5`, omittedRoles: [], score: 0, isBassRoot: true, dyad5: true });
                 }
-                return { name: 'Unidentified', notesText: uniquePcs.map(pc => CHORD_ROOT_SPELLING[pc]).join(', ') };
             }
+            return { uniquePcs, bassPc, list: list.slice(0, 8) };
+        }
 
-            const rootName = CHORD_ROOT_SPELLING[best.rootPc];
-            let label = `${rootName}${chordSuffixFor(best.qualityKey)}`;
-            if (best.rootPc !== bassPc) label += `/${CHORD_ROOT_SPELLING[bassPc]}`;
+        // Interval label shown on a marker for a pitch class, relative to the selected
+        // interpretation's root — role-aware so e.g. semitone 8 reads "#5" in a 7#5
+        // chord but "b13" in a 7b13 chord.
+        const analyzerRoleMarkerLabels = [
+            { 0: '1' },
+            { 2: 'sus2', 3: 'b3', 4: '3', 5: 'sus4' },
+            { 6: 'b5', 7: '5', 8: '#5' },
+            { 8: 'b6', 9: '6', 10: 'b7', 11: '7' },
+            { 1: 'b9', 2: '9', 3: '#9' },
+            { 5: '11', 6: '#11' },
+            { 8: 'b13', 9: '13' }
+        ];
+        const analyzerGenericLabels = ['1', 'b2', '2', 'b3', '3', '4', 'b5', '5', 'b6', '6', 'b7', '7'];
+        // Marker/box colors by chord-tone role (root, 3rd, 5th, 7th, 9th, 11th, 13th).
+        const analyzerRoleColors = ['#b9c145', '#f0a030', '#4db6e2', '#e07040', '#e05a5a', '#c9a227', '#d0506e'];
 
-            const fullIntervals = chordQualities[best.qualityKey];
-            const relative = new Set(uniquePcs.map(pc => (pc - best.rootPc + 12) % 12));
-            const omittedRoles = [];
-            fullIntervals.forEach((iv, idx) => { if (!relative.has(iv)) omittedRoles.push(chordToneRoleNames[idx] || `#${idx + 1}`); });
-            if (omittedRoles.length) label += ` (no ${omittedRoles.join(', ')})`;
+        function analyzerMarkerInfo(pc, interp, bassPc) {
+            if (!interp) {
+                const base = bassPc === null ? pc : bassPc;
+                const rel = (pc - base + 12) % 12;
+                return { label: analyzerGenericLabels[rel], isRoot: rel === 0, roleIdx: rel === 0 ? 0 : null };
+            }
+            const rel = (pc - interp.rootPc + 12) % 12;
+            if (interp.dyad5) return { label: rel === 0 ? '1' : '5', isRoot: rel === 0, roleIdx: rel === 0 ? 0 : 2 };
+            const idx = chordQualities[interp.qualityKey].indexOf(rel);
+            if (idx < 0) return { label: analyzerGenericLabels[rel], isRoot: rel === 0, roleIdx: null };
+            let label = (analyzerRoleMarkerLabels[idx] || {})[rel] || analyzerGenericLabels[rel];
+            if (interp.qualityKey === 'dim7' && idx === 3) label = '°7';
+            return { label, isRoot: idx === 0, roleIdx: idx };
+        }
 
-            const notesText = uniquePcs.map(pc => {
-                const relPc = (pc - best.rootPc + 12) % 12;
-                const idx = fullIntervals.indexOf(relPc);
-                return { pc, idx: idx >= 0 ? idx : 99, name: idx >= 0 ? spellChordTone(rootName, idx, pc) : CHORD_ROOT_SPELLING[pc] };
-            }).sort((a, b) => a.idx - b.idx || a.pc - b.pc).map(x => x.name).join('–');
-
-            return { name: label, notesText };
+        function analyzerSpellPc(pc, interp) {
+            if (interp && !interp.dyad5) {
+                const rel = (pc - interp.rootPc + 12) % 12;
+                const idx = chordQualities[interp.qualityKey].indexOf(rel);
+                if (idx >= 0) return spellChordTone(interp.rootName, idx, pc);
+            }
+            return CHORD_ROOT_SPELLING[pc];
         }
 
         function renderAnalyzerDiagram() {
-            const startFretInput = document.getElementById('analyzer-start-fret');
-            const startFret = Math.max(0, parseInt(startFretInput.value, 10) || 1);
-            const fretRows = 5;
-            const minFrets = analyzerInstruments[analyzerInstrument].stringMinFrets;
-            const stringLabels = analyzerInstruments[analyzerInstrument].stringLabels;
+            const inst = analyzerInstruments[analyzerInstrument];
+            const order = analyzerDisplayOrders[analyzerInstrument];
+            const numStrings = analyzerTuning.length;
 
-            const diagram = document.getElementById('analyzer-diagram');
-            diagram.innerHTML = '';
+            const data = computeChordInterpretations();
+            analyzerInterpretations = data.list;
+            if (analyzerSelectedIdx >= analyzerInterpretations.length) analyzerSelectedIdx = 0;
+            const interp = analyzerInterpretations[analyzerSelectedIdx] || null;
 
-            const labelsCol = document.createElement('div');
-            labelsCol.className = 'analyzer-fret-labels';
-            const spacer = document.createElement('div');
-            spacer.className = 'analyzer-toggle-spacer';
-            labelsCol.appendChild(spacer);
-            for (let r = 0; r < fretRows; r++) {
-                const fretNum = startFret + r;
-                const lbl = document.createElement('div');
-                lbl.className = 'analyzer-fret-label';
-                lbl.textContent = fretNum === 0 ? 'Open' : `${fretNum}fr`;
-                labelsCol.appendChild(lbl);
+            // ---- Header: chord name, notes, tuning ----
+            const nameEl = document.getElementById('analyzer-chord-name');
+            if (!data.uniquePcs.length) nameEl.textContent = '—';
+            else if (interp) nameEl.textContent = interp.name + (interp.omittedRoles.length ? ` (no ${interp.omittedRoles.join(', ')})` : '');
+            else if (data.uniquePcs.length === 1) nameEl.textContent = `${CHORD_ROOT_SPELLING[data.uniquePcs[0]]} (single note)`;
+            else nameEl.textContent = 'Unidentified';
+
+            const spelled = data.uniquePcs.map(pc => ({ pc, name: analyzerSpellPc(pc, interp) }));
+            if (interp && !interp.dyad5) {
+                const q = chordQualities[interp.qualityKey];
+                spelled.sort((a, b) => q.indexOf((a.pc - interp.rootPc + 12) % 12) - q.indexOf((b.pc - interp.rootPc + 12) % 12));
             }
-            diagram.appendChild(labelsCol);
+            document.getElementById('analyzer-chord-notes').textContent =
+                data.uniquePcs.length ? `Notes: ${spelled.map(x => x.name).join('–')}` : '';
 
-            analyzerTuning.forEach((openNote, stringIndex) => {
-                const col = document.createElement('div');
-                col.className = 'analyzer-string-col';
+            document.getElementById('analyzer-tuning-letters').textContent = analyzerTuning.join(' ');
+            const presetSelect = document.getElementById('analyzer-tuning-preset');
+            const presetObj = inst.tuningPresets[Number(presetSelect.value)];
+            document.getElementById('analyzer-tuning-name').textContent =
+                (presetObj && presetObj.notesLowToHigh) ? `${presetObj.name} Tuning` : 'Custom Tuning';
+
+            // ---- Board: strings as horizontal rows, frets 0-15 left to right ----
+            const OPEN_W = 46, FRET_W = 52, NOTE_W = 46, ROW_H = 36, NUM_H = 28;
+            const wrap = document.getElementById('analyzer-board');
+            wrap.innerHTML = '';
+            const board = document.createElement('div');
+            board.style.display = 'grid';
+            board.style.position = 'relative';
+            board.style.width = 'fit-content';
+            board.style.gridTemplateColumns = `${OPEN_W}px repeat(${ANALYZER_FRETS}, ${FRET_W}px) ${NOTE_W}px`;
+            board.style.gridTemplateRows = `repeat(${numStrings}, ${ROW_H}px) ${NUM_H}px`;
+
+            order.forEach(stringIndex => {
                 const status = analyzerStringStatus[stringIndex];
+                const minFret = inst.stringMinFrets[stringIndex] || 0;
+                const pc = analyzerSoundingPc(stringIndex);
+                const mInfo = pc !== null ? analyzerMarkerInfo(pc, interp, data.bassPc) : null;
+                const roleColor = mInfo && mInfo.roleIdx !== null ? analyzerRoleColors[mInfo.roleIdx] : '#9a947c';
 
-                const toggles = document.createElement('div');
-                toggles.className = 'analyzer-string-toggles';
+                // Open-position cell: interval circle when open, X when muted; click toggles.
+                const openCell = document.createElement('div');
+                openCell.className = 'analyzer-cell open-cell';
+                openCell.title = 'Toggle open / muted';
+                openCell.addEventListener('click', () => toggleAnalyzerStringOpenMute(stringIndex));
+                if (status.status === 'muted') {
+                    const x = document.createElement('div');
+                    x.className = 'analyzer-marker mute-marker';
+                    x.textContent = '✕';
+                    openCell.appendChild(x);
+                } else if (status.status === 'open') {
+                    const m = document.createElement('div');
+                    m.className = 'analyzer-marker open-marker' + (mInfo && mInfo.isRoot ? ' is-root' : '');
+                    m.style.borderColor = roleColor;
+                    m.style.color = roleColor;
+                    m.textContent = mInfo ? mInfo.label : '';
+                    openCell.appendChild(m);
+                }
+                board.appendChild(openCell);
 
-                const openBtn = document.createElement('button');
-                openBtn.type = 'button';
-                openBtn.className = 'analyzer-toggle-btn' + (status.status === 'open' ? ' active-open' : '');
-                openBtn.textContent = 'O';
-                openBtn.title = 'Open string';
-                openBtn.addEventListener('click', () => setAnalyzerStringOpenOrMute(stringIndex, 'open'));
-                toggles.appendChild(openBtn);
-
-                const muteBtn = document.createElement('button');
-                muteBtn.type = 'button';
-                muteBtn.className = 'analyzer-toggle-btn' + (status.status === 'muted' ? ' active-mute' : '');
-                muteBtn.textContent = 'X';
-                muteBtn.title = 'Mute string';
-                muteBtn.addEventListener('click', () => setAnalyzerStringOpenOrMute(stringIndex, 'muted'));
-                toggles.appendChild(muteBtn);
-
-                col.appendChild(toggles);
-
-                for (let r = 0; r < fretRows; r++) {
-                    const fretNum = startFret + r;
+                for (let f = 1; f <= ANALYZER_FRETS; f++) {
                     const cell = document.createElement('div');
-                    cell.className = 'analyzer-fret-cell ' + (fretNum === 0 ? 'nut-row' : 'non-nut-row');
-                    const minFret = minFrets[stringIndex] || 0;
-                    if (fretNum < minFret) {
-                        cell.style.background = '#eee';
-                        cell.style.cursor = 'not-allowed';
+                    cell.className = 'analyzer-cell fret-cell' + (f === 1 ? ' first-fret' : '') + (status.status === 'muted' ? ' muted-row' : '');
+                    if (f < minFret) {
+                        cell.classList.add('missing');
                     } else {
-                        cell.addEventListener('click', () => setAnalyzerStringFret(stringIndex, fretNum));
-                        if (status.status === 'fretted' && status.fret === fretNum) {
-                            const dot = document.createElement('div');
-                            dot.className = 'analyzer-fret-dot';
-                            dot.textContent = fretNum;
-                            cell.appendChild(dot);
+                        const line = document.createElement('div');
+                        line.className = 'string-line';
+                        cell.appendChild(line);
+                        cell.addEventListener('click', () => setAnalyzerStringFret(stringIndex, f));
+                        if (status.status === 'fretted' && status.fret === f) {
+                            const m = document.createElement('div');
+                            m.className = 'analyzer-marker fretted' + (mInfo && mInfo.isRoot ? ' is-root' : '');
+                            m.style.background = roleColor;
+                            m.textContent = mInfo ? mInfo.label : '';
+                            cell.appendChild(m);
                         }
                     }
-                    col.appendChild(cell);
+                    board.appendChild(cell);
                 }
 
-                const strName = document.createElement('div');
-                strName.className = 'analyzer-string-name';
-                strName.textContent = `${stringLabels[stringIndex]}: ${openNote}`;
-                col.appendChild(strName);
-
-                diagram.appendChild(col);
+                // Sounding note letter at the right end of the string.
+                const noteCell = document.createElement('div');
+                noteCell.className = 'analyzer-cell';
+                if (pc !== null) {
+                    const letter = document.createElement('div');
+                    letter.className = 'analyzer-note-letter';
+                    letter.style.color = roleColor;
+                    letter.textContent = analyzerSpellPc(pc, interp);
+                    noteCell.appendChild(letter);
+                }
+                board.appendChild(noteCell);
             });
 
-            const result = identifyPlayedChord(analyzerTuning, analyzerStringStatus);
-            document.getElementById('analyzer-chord-name').textContent = result.name;
-            document.getElementById('analyzer-chord-notes').textContent = result.notesText ? `Notes: ${result.notesText}` : '';
-            const presetSelect = document.getElementById('analyzer-tuning-preset');
-            const presetLabel = presetSelect.selectedOptions[0] ? presetSelect.selectedOptions[0].textContent : '';
-            document.getElementById('analyzer-tuning-label').textContent =
-                `${analyzerInstruments[analyzerInstrument].name} — Tuning: ${presetLabel} — Strings (low→high): ${analyzerTuning.join(' ')}`;
+            // Fret-number row: 0 under the open column, then 1-15.
+            for (let f = 0; f <= ANALYZER_FRETS + 1; f++) {
+                const cell = document.createElement('div');
+                cell.className = 'analyzer-fret-number';
+                cell.textContent = f <= ANALYZER_FRETS ? f : '';
+                board.appendChild(cell);
+            }
+
+            // Inlay dots at 3/5/7/9/15, double at 12.
+            const addInlayDot = (fret, y) => {
+                const dot = document.createElement('div');
+                dot.className = 'analyzer-inlay-dot';
+                dot.style.left = `${OPEN_W + (fret - 0.5) * FRET_W - 4.5}px`;
+                dot.style.top = `${y - 4.5}px`;
+                board.appendChild(dot);
+            };
+            const boardH = numStrings * ROW_H;
+            [3, 5, 7, 9, 15].forEach(f => addInlayDot(f, boardH / 2));
+            addInlayDot(12, boardH * 0.3);
+            addInlayDot(12, boardH * 0.7);
+
+            wrap.appendChild(board);
+
+            renderAnalyzerNames();
+            renderAnalyzerBreakdown(interp, data);
+        }
+
+        function renderAnalyzerNames() {
+            const container = document.getElementById('analyzer-names');
+            container.innerHTML = '';
+            if (!analyzerInterpretations.length) {
+                const msg = document.createElement('span');
+                msg.className = 'no-chords-msg';
+                msg.textContent = 'No matching chord names yet — play at least two different notes.';
+                container.appendChild(msg);
+                return;
+            }
+            analyzerInterpretations.forEach((interp, i) => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'analyzer-name-btn' + (i === analyzerSelectedIdx ? ' selected' : '');
+                btn.textContent = interp.name;
+                if (interp.omittedRoles.length) {
+                    const small = document.createElement('small');
+                    small.textContent = `no ${interp.omittedRoles.join(', ')}`;
+                    btn.appendChild(small);
+                }
+                btn.addEventListener('click', () => { analyzerSelectedIdx = i; renderAnalyzerDiagram(); });
+                container.appendChild(btn);
+            });
+        }
+
+        // Oolimo-style structural breakdown: Bass / Triad / 7th-6th / Extensions rows,
+        // each showing the note filling that slot and which interval flavor it is.
+        const analyzerBreakdownRows = [
+            { group: 'Extensions', role: 6, labels: [['b13', 8], ['13', 9]] },
+            { group: '', role: 5, labels: [['11', 5], ['#11', 6]] },
+            { group: '', role: 4, labels: [['b9', 1], ['9', 2], ['#9', 3]] },
+            { group: '7th / 6th Chord', role: 3, labels: [['b6', 8], ['6 · dim7', 9], ['7', 10], ['maj7', 11]] },
+            { group: 'Triad', role: 2, labels: [['b5', 6], ['5', 7], ['#5', 8]] },
+            { group: '', role: 1, labels: [['sus2', 2], ['m3', 3], ['3', 4], ['sus4', 5]] },
+            { group: '', role: 0, labels: [['Root (1)', 0]] },
+            { group: 'Bass (Slash Chords only)', role: 'bass', labels: [] }
+        ];
+
+        function renderAnalyzerBreakdown(interp, data) {
+            const container = document.getElementById('analyzer-breakdown');
+            container.innerHTML = '';
+            const q = interp && !interp.dyad5 ? chordQualities[interp.qualityKey] : (interp && interp.dyad5 ? [0, null, 7] : null);
+            const relSet = interp ? new Set(data.uniquePcs.map(pc => (pc - interp.rootPc + 12) % 12)) : null;
+
+            analyzerBreakdownRows.forEach(rowDef => {
+                const row = document.createElement('div');
+                row.className = 'bd-row';
+
+                const groupLabel = document.createElement('div');
+                groupLabel.className = 'bd-group-label';
+                groupLabel.textContent = rowDef.group;
+                row.appendChild(groupLabel);
+
+                const box = document.createElement('div');
+                box.className = 'bd-note-box';
+                let activeSemitone = null;
+                if (rowDef.role === 'bass') {
+                    if (interp && data.bassPc !== interp.rootPc) {
+                        box.textContent = CHORD_ROOT_SPELLING[data.bassPc];
+                        box.style.borderColor = '#9e9e9e';
+                    }
+                } else if (interp && q) {
+                    const semitone = q[rowDef.role];
+                    if (semitone !== undefined && semitone !== null && relSet.has(semitone)) {
+                        const pc = (interp.rootPc + semitone) % 12;
+                        box.textContent = interp.dyad5 ? CHORD_ROOT_SPELLING[pc] : spellChordTone(interp.rootName, rowDef.role, pc);
+                        box.style.borderColor = analyzerRoleColors[rowDef.role];
+                        activeSemitone = semitone;
+                    }
+                }
+                row.appendChild(box);
+
+                const labels = document.createElement('div');
+                labels.className = 'bd-labels';
+                rowDef.labels.forEach(([text, semitone]) => {
+                    const span = document.createElement('span');
+                    span.textContent = text;
+                    if (activeSemitone === semitone) {
+                        span.className = 'active';
+                        span.style.color = analyzerRoleColors[rowDef.role];
+                    }
+                    labels.appendChild(span);
+                });
+                row.appendChild(labels);
+
+                container.appendChild(row);
+            });
         }
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -1797,7 +2028,6 @@
                 btn.addEventListener('click', () => switchAnalyzerInstrument(btn.dataset.analyzerInstrument));
             });
             document.getElementById('analyzer-tuning-preset').addEventListener('change', e => applyAnalyzerTuningPreset(Number(e.target.value)));
-            document.getElementById('analyzer-start-fret').addEventListener('change', renderAnalyzerDiagram);
             document.getElementById('analyzer-reset-btn').addEventListener('click', () => {
                 resetAnalyzerStrings();
                 renderAnalyzerDiagram();

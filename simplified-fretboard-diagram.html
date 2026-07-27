@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Customizable Fretboard Diagram</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }
+        body { font-family: Arial, sans-serif; margin: 0; padding: 14px 18px; }
+        h1 { font-size: 26px; margin: 0 0 12px 0; }
         .fretboard-container { 
             position: relative; 
             margin-top: 50px; 
@@ -199,9 +200,18 @@
            right, so the whole chord + its readings fit on one screen. */
         .analyzer-layout {
             display: grid; grid-template-columns: auto minmax(340px, 1fr);
-            gap: 18px; align-items: start; margin-top: 16px;
+            gap: 14px; align-items: start; margin-top: 12px;
         }
-        .analyzer-side { display: flex; flex-direction: column; gap: 18px; }
+        .analyzer-main, .analyzer-side { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+
+        /* The analyzer tab packs a lot in, so tighten its shared control spacing. */
+        #view-analyzer .controls { margin-bottom: 10px; }
+        #view-analyzer .controls label { font-size: 14px; }
+        #view-analyzer select, #view-analyzer button { margin-right: 6px; padding: 4px; }
+        #view-analyzer .chord-buttons-row { margin-bottom: 8px; }
+        #view-analyzer .chord-buttons button { padding: 5px 9px; font-size: 13px; }
+        #view-analyzer .role-legend { margin-bottom: 0; }
+        #view-analyzer .fretboard-container { margin-top: 14px; }
         .analyzer-card {
             padding: 18px 22px; border: 2px solid #333; border-radius: 12px; background: #fff;
         }
@@ -375,21 +385,50 @@
         <div id="analyzer-tuning-controls" class="tuning-controls hidden"></div>
 
         <div class="analyzer-layout">
-            <div id="analyzer-card" class="analyzer-card">
-                <div class="analyzer-header">
-                    <div>
-                        <div id="analyzer-chord-name" class="analyzer-chord-name">—</div>
-                        <div id="analyzer-chord-notes" class="analyzer-chord-notes"></div>
-                    </div>
-                    <div class="analyzer-header-right">
+            <div class="analyzer-main">
+                <div id="analyzer-card" class="analyzer-card">
+                    <div class="analyzer-header">
                         <div>
-                            <div id="analyzer-tuning-letters" class="analyzer-tuning-letters"></div>
-                            <div id="analyzer-tuning-name" class="analyzer-tuning-name"></div>
+                            <div id="analyzer-chord-name" class="analyzer-chord-name">—</div>
+                            <div id="analyzer-chord-notes" class="analyzer-chord-notes"></div>
                         </div>
-                        <button type="button" id="analyzer-reset-btn" class="analyzer-reset-icon" title="Reset all strings to open">↺</button>
+                        <div class="analyzer-header-right">
+                            <div>
+                                <div id="analyzer-tuning-letters" class="analyzer-tuning-letters"></div>
+                                <div id="analyzer-tuning-name" class="analyzer-tuning-name"></div>
+                            </div>
+                            <button type="button" id="analyzer-reset-btn" class="analyzer-reset-icon" title="Reset all strings to open">↺</button>
+                        </div>
+                    </div>
+                    <div id="analyzer-board" class="analyzer-board-wrap"></div>
+                </div>
+
+                <div class="analyzer-panel">
+                    <h2 class="analyzer-panel-title">Scale Fretboard</h2>
+                    <div class="controls">
+                        <label for="analyzer-scale-key">Key:</label>
+                        <select id="analyzer-scale-key"></select>
+                        <label for="analyzer-scale-select">Scale:</label>
+                        <select id="analyzer-scale-select"></select>
+                        <label for="analyzer-capo-select">Capo:</label>
+                        <select id="analyzer-capo-select" class="capo-select"></select>
+                        <label for="chord-override3">Chord Type:</label>
+                        <select id="chord-override3"></select>
+                        <label><input type="checkbox" id="show-intervals3"> Intervals</label>
+                    </div>
+                    <div class="chord-buttons-row">
+                        <div id="chord-buttons3" class="chord-buttons"></div>
+                    </div>
+                    <div class="role-legend">
+                        <span><span class="swatch" style="background:#9b30ff"></span>Root</span>
+                        <span><span class="swatch" style="background:#ff8c00"></span>3rd</span>
+                        <span><span class="swatch" style="background:#00b894"></span>5th</span>
+                        <span><span class="swatch" style="background:#1565ff"></span>7th</span>
+                        <span><span class="swatch" style="background:#ff4da6"></span>9th</span>
+                        <span><span class="swatch" style="background:#c98a00"></span>11th</span>
+                        <span><span class="swatch" style="background:#d63031"></span>13th</span>
                     </div>
                 </div>
-                <div id="analyzer-board" class="analyzer-board-wrap"></div>
             </div>
 
             <div class="analyzer-side">
@@ -404,30 +443,6 @@
             </div>
         </div>
 
-        <h2>Scale Fretboard</h2>
-        <div class="controls">
-            <label for="analyzer-scale-key">Select Key:</label>
-            <select id="analyzer-scale-key"></select>
-            <label for="analyzer-scale-select">Select Scale:</label>
-            <select id="analyzer-scale-select"></select>
-            <label for="analyzer-capo-select">Capo:</label>
-            <select id="analyzer-capo-select" class="capo-select"></select>
-            <label><input type="checkbox" id="show-intervals3"> Show scale intervals</label>
-            <label for="chord-override3">Chord Type:</label>
-            <select id="chord-override3"></select>
-        </div>
-        <div class="chord-buttons-row">
-            <div id="chord-buttons3" class="chord-buttons"></div>
-        </div>
-        <div class="role-legend">
-            <span><span class="swatch" style="background:#9b30ff"></span>Root</span>
-            <span><span class="swatch" style="background:#ff8c00"></span>3rd</span>
-            <span><span class="swatch" style="background:#00b894"></span>5th</span>
-            <span><span class="swatch" style="background:#1565ff"></span>7th</span>
-            <span><span class="swatch" style="background:#ff4da6"></span>9th</span>
-            <span><span class="swatch" style="background:#c98a00"></span>11th</span>
-            <span><span class="swatch" style="background:#d63031"></span>13th</span>
-        </div>
         <div class="fretboard-container">
             <div id="fretboard3" class="fretboard"></div>
         </div>
@@ -721,14 +736,25 @@
             const naturalPc = LETTER_PC[letter];
             const diff = (((targetPc - naturalPc) % 12) + 12) % 12;
             const signed = diff > 6 ? diff - 12 : diff;
-            const accidentals = { '-2': 'bb', '-1': 'b', '0': '', '1': '#', '2': '##' };
-            const accidental = accidentals[String(signed)];
-            return accidental === undefined ? notes[targetPc] : letter + accidental;
+            // Strictly correct spelling sometimes needs a double accidental (C#7alt's
+            // #9 really is D##). That's unreadable on a diagram, so anything beyond a
+            // single sharp/flat falls back to the practical single-accidental name.
+            if (signed === -1) return letter + 'b';
+            if (signed === 0) return letter;
+            if (signed === 1) return letter + '#';
+            return CHORD_ROOT_SPELLING[targetPc];
         }
 
         // A scale degree's letter is always (tonic letter + degreeNumber - 1) steps on.
         function spellScaleDegree(rootNoteName, degreeNumber, targetPc) {
             return spellByLetterStep(rootNoteName[0], degreeNumber - 1, targetPc);
+        }
+
+        // The conventional written name for a key, used as the anchor letter for all
+        // scale-degree spelling — so the key "A#" spells as Bb major (Bb C D Eb F G A)
+        // rather than the theoretical A# major (A# B# C## D# E# F## G##).
+        function keyTonicName(rootNoteIndex) {
+            return CHORD_ROOT_SPELLING[rootNoteIndex];
         }
 
         // Chord tones stack in thirds — each letter-step is 2 letters from the chord's
@@ -777,7 +803,7 @@
             }
 
             const degreeNumber = Number(scale[degreeIndex].replace(/[^0-9]/g, ''));
-            const rootName = spellScaleDegree(notes[rootNoteIndex], degreeNumber, degreeRootPc);
+            const rootName = spellScaleDegree(keyTonicName(rootNoteIndex), degreeNumber, degreeRootPc);
             const qualityName = qualityKey ? chordTypeGroups.flatMap(g => g.items).find(i => i.key === qualityKey).name : null;
             const label = qualityKey ? `${rootName}${chordSuffixFor(qualityKey)}` : `${rootName} (custom)`;
             return { rootName, rootPc: degreeRootPc, qualityKey, qualityName, label, pcs: usedPcs };
@@ -862,7 +888,7 @@
                     // if the current scale is mode index 1 (Dorian), the mode at index 3
                     // (Lydian) is 2 letters further on from the current root's letter.
                     const currentModeIdx = modes.findIndex(m => m.intervals.join(',') === scaleKey);
-                    const currentRootLetter = notes[rootNoteIndex][0];
+                    const currentRootLetter = keyTonicName(rootNoteIndex)[0];
                     return modes.map((m, i) => {
                         const rootPc = (tonicPc + intervals[mode0Intervals[i]]) % 12;
                         const isCurrent = rootPc === rootNoteIndex && m.intervals.join(',') === scaleKey;
@@ -983,7 +1009,7 @@
             const tableSection = document.createElement('div');
             tableSection.className = 'harmony-section';
             const tableHeading = document.createElement('h2');
-            tableHeading.textContent = `Diatonic Chords in ${key} ${document.getElementById('harmony-scale-select').selectedOptions[0].textContent}`;
+            tableHeading.textContent = `Diatonic Chords in ${keyTonicName(rootNoteIndex)} ${document.getElementById('harmony-scale-select').selectedOptions[0].textContent}`;
             tableSection.appendChild(tableHeading);
             const tableNote = document.createElement('p');
             tableNote.className = 'section-note';
@@ -1435,6 +1461,17 @@
             const chordPCs = chordButtonPCs[boardIndex];
             const stringMinFrets = ctx.stringMinFrets;
 
+            // Spell every scale note by its own degree letter, so the circles agree with
+            // the chord names above them (C Dorian's b7 reads "Bb", not "A#").
+            const tonicName = keyTonicName(rootNoteIndex);
+            const spellingByPc = new Map();
+            scale.forEach(interval => {
+                const pc = (rootNoteIndex + intervals[interval]) % 12;
+                if (spellingByPc.has(pc)) return;
+                const degreeNumber = Number(interval.replace(/[^0-9]/g, ''));
+                spellingByPc.set(pc, spellScaleDegree(tonicName, degreeNumber, pc));
+            });
+
             fretboardElement.innerHTML = '';
             for (let i = 0; i < 22; i++) {
                 const fretDiv = document.createElement('div');
@@ -1461,7 +1498,7 @@
                         const scaleIdx = scale.findIndex(interval => (rootNoteIndex + intervals[interval]) % 12 === noteIndex);
                         const noteDiv = document.createElement('div');
                         noteDiv.className = `note interval-${scaleIdx + 1}`;
-                        noteDiv.textContent = showIntervals ? scale[scaleIdx] : noteName;
+                        noteDiv.textContent = showIntervals ? scale[scaleIdx] : (spellingByPc.get(noteIndex) || noteName);
                         noteDiv.style.top = `${(stringIndex * 30) - 12}px`;
                         // Both rings are applied independently (not else-if) so a note
                         // shared by the current and next chord shows both at once.

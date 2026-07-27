@@ -194,70 +194,77 @@
         .loop-arrow { color: #999; }
         .harmony-not-applicable { color: #666; font-style: italic; max-width: 700px; }
 
-        /* ---- Chord Analyzer (dark, oolimo-style horizontal board) ---- */
-        .analyzer-card {
-            display: inline-block; margin-top: 24px; padding: 24px 30px;
-            border-radius: 14px; background: #14130e; color: #eee;
+        /* ---- Chord Analyzer (light theme, matching the fretboard diagram) ---- */
+        /* Two columns: the clickable board on the left, the analysis panels on the
+           right, so the whole chord + its readings fit on one screen. */
+        .analyzer-layout {
+            display: grid; grid-template-columns: auto minmax(340px, 1fr);
+            gap: 18px; align-items: start; margin-top: 16px;
         }
-        .analyzer-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 48px; margin-bottom: 22px; }
-        .analyzer-chord-name { font-size: 40px; font-weight: bold; color: #fff; line-height: 1.1; min-width: 140px; }
-        .analyzer-chord-notes { font-size: 14px; color: #b7b29b; font-family: "Courier New", monospace; margin-top: 6px; }
-        .analyzer-header-right { display: flex; align-items: flex-start; gap: 20px; text-align: right; }
-        .analyzer-tuning-letters { font-size: 19px; letter-spacing: 7px; color: #ece5c7; font-weight: 600; }
-        .analyzer-tuning-name { font-size: 13px; color: #a9a389; margin-top: 3px; }
+        .analyzer-side { display: flex; flex-direction: column; gap: 18px; }
+        .analyzer-card {
+            padding: 18px 22px; border: 2px solid #333; border-radius: 12px; background: #fff;
+        }
+        .analyzer-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 32px; margin-bottom: 14px; }
+        .analyzer-chord-name { font-size: 38px; font-weight: bold; color: #111; line-height: 1.1; min-width: 130px; }
+        .analyzer-chord-notes { font-size: 14px; color: #555; font-family: "Courier New", monospace; margin-top: 4px; }
+        .analyzer-header-right { display: flex; align-items: flex-start; gap: 16px; text-align: right; }
+        .analyzer-tuning-letters { font-size: 18px; letter-spacing: 6px; color: #222; font-weight: bold; }
+        .analyzer-tuning-name { font-size: 12px; color: #777; margin-top: 3px; }
         .analyzer-reset-icon {
-            background: none; border: none; color: #a9b055; font-size: 28px;
+            background: none; border: none; color: #9b30ff; font-size: 26px;
             cursor: pointer; line-height: 1; padding: 0; margin: 0;
         }
         .analyzer-board-wrap { position: relative; overflow-x: auto; }
         .analyzer-cell { position: relative; }
-        .analyzer-cell.fret-cell { border-right: 1px solid #57523b; cursor: pointer; }
-        .analyzer-cell.fret-cell.first-fret { border-left: 4px solid #cfc8a6; }
+        .analyzer-cell.fret-cell { border-right: 2px solid #000; cursor: pointer; }
+        /* Marker frets shaded the same lavender as the main fretboard diagram. */
+        .analyzer-cell.fret-cell.shaded { background-color: #ece9fb; }
+        .analyzer-cell.fret-cell.first-fret { border-left: 4px solid #333; }
         .analyzer-cell.fret-cell .string-line {
-            position: absolute; left: 0; right: 0; top: 50%; height: 1px; background: #8d8768; pointer-events: none;
+            position: absolute; left: 0; right: 0; top: 50%; height: 2px; background: #999; pointer-events: none;
         }
-        .analyzer-cell.fret-cell.muted-row .string-line { background: #3d3a2c; }
-        .analyzer-cell.fret-cell.missing { cursor: default; border-right-color: transparent; }
+        .analyzer-cell.fret-cell.muted-row .string-line { background: #ddd; }
+        .analyzer-cell.fret-cell.missing { cursor: default; border-right-color: transparent; background: none; }
         .analyzer-cell.open-cell { cursor: pointer; }
         .analyzer-marker {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            width: 27px; height: 27px; display: flex; align-items: center; justify-content: center;
-            font-size: 12px; font-weight: bold; z-index: 2; box-sizing: border-box; pointer-events: none;
+            width: 26px; height: 26px; display: flex; align-items: center; justify-content: center;
+            font-size: 11px; font-weight: bold; z-index: 2; box-sizing: border-box; pointer-events: none;
         }
-        .analyzer-marker.fretted { border-radius: 50%; color: #14130e; }
+        .analyzer-marker.fretted { border-radius: 50%; border: 1px solid #333; }
         .analyzer-marker.fretted.is-root { border-radius: 6px; }
-        .analyzer-marker.open-marker { border-radius: 50%; border: 2px solid; background: transparent; }
+        .analyzer-marker.open-marker { border-radius: 50%; border: 2px solid; background: #fff; }
         .analyzer-marker.open-marker.is-root { border-radius: 6px; }
-        .analyzer-marker.mute-marker { color: #99917a; font-size: 15px; }
+        .analyzer-marker.mute-marker { color: #aaa; font-size: 15px; }
         .analyzer-note-letter {
-            position: absolute; top: 50%; transform: translateY(-50%); left: 12px;
+            position: absolute; top: 50%; transform: translateY(-50%); left: 10px;
             font-size: 14px; font-weight: bold;
         }
-        .analyzer-fret-number { display: flex; align-items: center; justify-content: center; font-size: 12px; color: #9a947c; }
-        .analyzer-inlay-dot { position: absolute; width: 9px; height: 9px; border-radius: 50%; background: #4c462f; z-index: 1; pointer-events: none; }
+        .analyzer-fret-number { display: flex; align-items: center; justify-content: center; font-size: 12px; color: #777; }
 
         .analyzer-panel {
-            margin-top: 20px; padding: 20px 26px; border-radius: 14px;
-            background: #14130e; color: #ddd; max-width: 900px;
+            padding: 16px 20px; border: 1px solid #ccc; border-radius: 10px; background: #fff;
         }
-        .analyzer-panel-title { font-size: 20px; color: #7fb2b8; border-bottom: 1px solid #3a382c; padding-bottom: 8px; margin: 0 0 16px 0; font-weight: normal; }
-        .analyzer-names { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+        .analyzer-panel-title { font-size: 17px; color: #333; border-bottom: 2px solid #333; padding-bottom: 7px; margin: 0 0 14px 0; }
+        .analyzer-names { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
         .analyzer-name-btn {
-            text-align: left; padding: 12px 16px; font-size: 18px; border-radius: 8px;
-            border: 1px solid #3c392b; background: #1d1b13; color: #cfcab2; cursor: pointer; margin-right: 0;
+            text-align: left; padding: 9px 12px; font-size: 16px; border-radius: 6px;
+            border: 1px solid #999; background: #fff; color: #222; cursor: pointer; margin-right: 0;
         }
-        .analyzer-name-btn.selected { border-color: #b9c145; color: #fff; }
-        .analyzer-name-btn small { color: #8d8768; font-size: 12px; margin-left: 8px; }
+        /* Selected reading uses the same treatment as an active chord button. */
+        .analyzer-name-btn.selected { border-color: #111; background: #e9d9ff; box-shadow: 0 0 0 2px #9b30ff; }
+        .analyzer-name-btn small { color: #777; font-size: 11px; margin-left: 6px; }
 
-        .analyzer-breakdown { display: flex; flex-direction: column; gap: 8px; }
-        .bd-row { display: grid; grid-template-columns: 160px 140px 1fr; align-items: center; gap: 16px; }
-        .bd-group-label { font-size: 13px; color: #9a947c; }
+        .analyzer-breakdown { display: flex; flex-direction: column; gap: 6px; }
+        .bd-row { display: grid; grid-template-columns: 118px 84px 1fr; align-items: center; gap: 12px; }
+        .bd-group-label { font-size: 12px; color: #666; }
         .bd-note-box {
-            height: 44px; border: 2px solid #35332a; border-radius: 10px;
+            height: 38px; border: 2px solid #ddd; border-radius: 8px;
             display: flex; align-items: center; justify-content: center;
-            font-size: 20px; font-weight: bold; color: #fff; background: #191811;
+            font-size: 18px; font-weight: bold; color: #222; background: #fafafa;
         }
-        .bd-labels { display: flex; gap: 18px; font-size: 14px; color: #6d6852; flex-wrap: wrap; align-items: center; }
+        .bd-labels { display: flex; gap: 12px; font-size: 13px; color: #aaa; flex-wrap: wrap; align-items: center; }
         .bd-labels .active { font-weight: bold; }
     </style>
 </head>
@@ -357,45 +364,72 @@
     </div>
 
     <div id="view-analyzer" class="view hidden">
-        <p class="harmony-intro">
-            Click frets on the diagram to build a chord shape in <strong>any tuning</strong> — including
-            fully custom ones — and it's identified live. Fully independent from the other tabs' settings.
-        </p>
-        <div class="instrument-tabs">
-            <button type="button" class="instrument-tab active" data-analyzer-instrument="guitar">🎸 Guitar (6-String)</button>
-            <button type="button" class="instrument-tab" data-analyzer-instrument="banjo">🪕 Banjo (5-String)</button>
-        </div>
-        <div class="controls">
+        <div class="controls" style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+            <div class="instrument-tabs" style="margin-bottom:0;">
+                <button type="button" class="instrument-tab active" data-analyzer-instrument="guitar">🎸 Guitar (6-String)</button>
+                <button type="button" class="instrument-tab" data-analyzer-instrument="banjo">🪕 Banjo (5-String)</button>
+            </div>
             <label for="analyzer-tuning-preset">Tuning:</label>
             <select id="analyzer-tuning-preset"></select>
         </div>
         <div id="analyzer-tuning-controls" class="tuning-controls hidden"></div>
 
-        <div id="analyzer-card" class="analyzer-card">
-            <div class="analyzer-header">
-                <div>
-                    <div id="analyzer-chord-name" class="analyzer-chord-name">—</div>
-                    <div id="analyzer-chord-notes" class="analyzer-chord-notes"></div>
-                </div>
-                <div class="analyzer-header-right">
+        <div class="analyzer-layout">
+            <div id="analyzer-card" class="analyzer-card">
+                <div class="analyzer-header">
                     <div>
-                        <div id="analyzer-tuning-letters" class="analyzer-tuning-letters"></div>
-                        <div id="analyzer-tuning-name" class="analyzer-tuning-name"></div>
+                        <div id="analyzer-chord-name" class="analyzer-chord-name">—</div>
+                        <div id="analyzer-chord-notes" class="analyzer-chord-notes"></div>
                     </div>
-                    <button type="button" id="analyzer-reset-btn" class="analyzer-reset-icon" title="Reset all strings to open">↺</button>
+                    <div class="analyzer-header-right">
+                        <div>
+                            <div id="analyzer-tuning-letters" class="analyzer-tuning-letters"></div>
+                            <div id="analyzer-tuning-name" class="analyzer-tuning-name"></div>
+                        </div>
+                        <button type="button" id="analyzer-reset-btn" class="analyzer-reset-icon" title="Reset all strings to open">↺</button>
+                    </div>
+                </div>
+                <div id="analyzer-board" class="analyzer-board-wrap"></div>
+            </div>
+
+            <div class="analyzer-side">
+                <div class="analyzer-panel">
+                    <h2 class="analyzer-panel-title">Possible Chord Names</h2>
+                    <div id="analyzer-names" class="analyzer-names"></div>
+                </div>
+                <div class="analyzer-panel">
+                    <h2 class="analyzer-panel-title">Chord Tones and Chord Intervals</h2>
+                    <div id="analyzer-breakdown" class="analyzer-breakdown"></div>
                 </div>
             </div>
-            <div id="analyzer-board" class="analyzer-board-wrap"></div>
         </div>
 
-        <div class="analyzer-panel">
-            <h2 class="analyzer-panel-title">Possible Chord Names</h2>
-            <div id="analyzer-names" class="analyzer-names"></div>
+        <h2>Scale Fretboard</h2>
+        <div class="controls">
+            <label for="analyzer-scale-key">Select Key:</label>
+            <select id="analyzer-scale-key"></select>
+            <label for="analyzer-scale-select">Select Scale:</label>
+            <select id="analyzer-scale-select"></select>
+            <label for="analyzer-capo-select">Capo:</label>
+            <select id="analyzer-capo-select" class="capo-select"></select>
+            <label><input type="checkbox" id="show-intervals3"> Show scale intervals</label>
+            <label for="chord-override3">Chord Type:</label>
+            <select id="chord-override3"></select>
         </div>
-
-        <div class="analyzer-panel">
-            <h2 class="analyzer-panel-title">Chord Tones and Chord Intervals</h2>
-            <div id="analyzer-breakdown" class="analyzer-breakdown"></div>
+        <div class="chord-buttons-row">
+            <div id="chord-buttons3" class="chord-buttons"></div>
+        </div>
+        <div class="role-legend">
+            <span><span class="swatch" style="background:#9b30ff"></span>Root</span>
+            <span><span class="swatch" style="background:#ff8c00"></span>3rd</span>
+            <span><span class="swatch" style="background:#00b894"></span>5th</span>
+            <span><span class="swatch" style="background:#1565ff"></span>7th</span>
+            <span><span class="swatch" style="background:#ff4da6"></span>9th</span>
+            <span><span class="swatch" style="background:#c98a00"></span>11th</span>
+            <span><span class="swatch" style="background:#d63031"></span>13th</span>
+        </div>
+        <div class="fretboard-container">
+            <div id="fretboard3" class="fretboard"></div>
         </div>
     </div>
 
@@ -618,16 +652,20 @@
         let currentInstrument = 'guitar';
         let currentTuning = instruments[currentInstrument].defaultTuning.slice();
 
-        let showIntervalsPerBoard = [false, false]; // "show intervals" toggle, independent per fretboard
+        // Board indices: 0 = Fretboard 1, 1 = Fretboard 2, 2 = the Chord Analyzer tab's
+        // scale fretboard (which uses the analyzer's own tuning, key, scale and capo).
+        let showIntervalsPerBoard = [false, false, false]; // "show intervals" toggle, independent per fretboard
         let activeChordPCs = null; // Set of pitch classes (0-11) for the current chord, or null
         let nextChordPCs = null;   // Set of pitch classes for the upcoming chord, or null
         let currentPreviewBarIndex = null; // bar index currently shown on Fretboard 2, or null
-        let capo = 0;              // capo fret, shared by both fretboards
-        let chordButtonPCs = [null, null];   // ringed pitch classes from a clicked diatonic chord button (Fretboard 1 only)
-        let chordButtonActive = [null, null]; // active degree index (Fretboard 1 only), or null
-        // Chord-type override per fretboard: board 0 overrides the clicked chord-button's
-        // quality; board 1 overrides the quality used to ring the progression's chords.
-        let chordOverride = ['auto', 'auto'];
+        let capo = 0;              // capo fret, shared by Fretboards 1 and 2
+        let analyzerCapo = 0;      // capo fret for the analyzer tab's scale fretboard
+        let chordButtonPCs = [null, null, null];   // ringed pitch classes from a clicked diatonic chord button
+        let chordButtonActive = [null, null, null]; // active chord-button degree index per board, or null
+        // Chord-type override per fretboard: boards 0 and 2 override the clicked
+        // chord-button's quality; board 1 overrides the quality used to ring the
+        // progression's chords.
+        let chordOverride = ['auto', 'auto', 'auto'];
 
         // Default 16-bar progression (A major I–IV–V, using plain diatonic triads)
         const defaultProgression = [
@@ -1122,15 +1160,17 @@
             output.appendChild(loopSection);
         }
 
-        // Diatonic chord buttons live only on Fretboard 1 (index 0).
-        function renderChordButtons() {
-            const rootNoteIndex = notes.indexOf(document.getElementById('key-select').value);
-            const scale = scales[document.getElementById('scale-type-select').value];
-            const container = document.getElementById('chord-buttons1');
+        // Diatonic chord buttons live on Fretboard 1 (board 0) and on the Chord
+        // Analyzer tab's scale fretboard (board 2), each reading their own key/scale.
+        function renderChordButtons(boardIndex = 0) {
+            const ctx = boardContext(boardIndex);
+            const rootNoteIndex = notes.indexOf(ctx.key);
+            const scale = scales[ctx.scaleType];
+            const container = document.getElementById(`chord-buttons${boardIndex + 1}`);
 
             container.innerHTML = '';
-            chordButtonActive[0] = null;
-            chordButtonPCs[0] = null;
+            chordButtonActive[boardIndex] = null;
+            chordButtonPCs[boardIndex] = null;
 
             if (scale.length !== 7) {
                 const msg = document.createElement('span');
@@ -1146,34 +1186,38 @@
                 btn.type = 'button';
                 btn.textContent = chord.label;
                 btn.dataset.degree = degreeIndex;
-                btn.addEventListener('click', () => selectChordButton(degreeIndex));
+                btn.addEventListener('click', () => selectChordButton(boardIndex, degreeIndex));
                 container.appendChild(btn);
             });
         }
 
-        function selectChordButton(degreeIndex) {
-            // Clicking the already-active button deselects it, clearing the ring.
-            if (chordButtonActive[0] === degreeIndex) {
-                chordButtonActive[0] = null;
-                chordButtonPCs[0] = null;
-                document.querySelectorAll('#chord-buttons1 button').forEach(b => b.classList.remove('active'));
-                updateFretboard(0);
+        // toggle: true (a real button click) means re-clicking the active button clears
+        // it. The Chord Type override re-applies the current selection instead, so it
+        // passes toggle: false — otherwise changing the quality would deselect the chord.
+        function selectChordButton(boardIndex, degreeIndex, { toggle = true } = {}) {
+            const container = `#chord-buttons${boardIndex + 1}`;
+            if (toggle && chordButtonActive[boardIndex] === degreeIndex) {
+                chordButtonActive[boardIndex] = null;
+                chordButtonPCs[boardIndex] = null;
+                document.querySelectorAll(`${container} button`).forEach(b => b.classList.remove('active'));
+                updateFretboard(boardIndex);
                 return;
             }
 
-            const rootNoteIndex = notes.indexOf(document.getElementById('key-select').value);
-            const scale = scales[document.getElementById('scale-type-select').value];
+            const ctx = boardContext(boardIndex);
+            const rootNoteIndex = notes.indexOf(ctx.key);
+            const scale = scales[ctx.scaleType];
             const chord = computeDiatonicChord(rootNoteIndex, scale, degreeIndex);
 
-            const override = chordOverride[0];
+            const override = chordOverride[boardIndex];
             const qualityKey = (override !== 'auto' && chordQualities[override]) ? override : chord.qualityKey;
-            chordButtonPCs[0] = qualityKey ? chordPCsForRootAndQuality(chord.rootName, qualityKey) : chord.pcs;
-            chordButtonActive[0] = degreeIndex;
+            chordButtonPCs[boardIndex] = qualityKey ? chordPCsForRootAndQuality(chord.rootName, qualityKey) : chord.pcs;
+            chordButtonActive[boardIndex] = degreeIndex;
 
-            document.querySelectorAll('#chord-buttons1 button').forEach(b => {
+            document.querySelectorAll(`${container} button`).forEach(b => {
                 b.classList.toggle('active', Number(b.dataset.degree) === degreeIndex);
             });
-            updateFretboard(0);
+            updateFretboard(boardIndex);
         }
 
         // Populates a <select> with <optgroup>s from chordTypeGroups. If includeAuto,
@@ -1221,16 +1265,39 @@
                 scaleSelect.appendChild(optgroup);
             });
 
-            const chordOverrideSelects = [document.getElementById('chord-override1'), document.getElementById('chord-override2')];
-            chordOverrideSelects.forEach(select => populateChordTypeSelect(select, true));
+            ['chord-override1', 'chord-override2', 'chord-override3']
+                .forEach(id => populateChordTypeSelect(document.getElementById(id), true));
 
-            const capoSelect = document.getElementById('capo-select');
-            for (let f = 0; f <= 12; f++) {
+            // The analyzer tab's scale fretboard has its own key/scale selects.
+            const analyzerKeySelect = document.getElementById('analyzer-scale-key');
+            notes.forEach(note => {
                 const option = document.createElement('option');
-                option.value = f;
-                option.textContent = f === 0 ? 'None' : f;
-                capoSelect.appendChild(option);
-            }
+                option.value = note;
+                option.textContent = note;
+                analyzerKeySelect.appendChild(option);
+            });
+            const analyzerScaleSelect = document.getElementById('analyzer-scale-select');
+            scaleGroups.forEach(group => {
+                const optgroup = document.createElement('optgroup');
+                optgroup.label = group.group;
+                group.items.forEach(item => {
+                    const option = document.createElement('option');
+                    option.value = item.key;
+                    option.textContent = item.name;
+                    optgroup.appendChild(option);
+                });
+                analyzerScaleSelect.appendChild(optgroup);
+            });
+
+            ['capo-select', 'analyzer-capo-select'].forEach(id => {
+                const capoSelect = document.getElementById(id);
+                for (let f = 0; f <= 12; f++) {
+                    const option = document.createElement('option');
+                    option.value = f;
+                    option.textContent = f === 0 ? 'None' : f;
+                    capoSelect.appendChild(option);
+                }
+            });
 
             populateTuningPresetSelect();
         }
@@ -1328,18 +1395,45 @@
             updateFretboard(1);
         }
 
+        // Per-board key/scale/tuning/capo source. Boards 0 and 1 share the Fretboard
+        // tab's controls; board 2 is the Chord Analyzer tab's scale fretboard, which
+        // follows the analyzer's own tuning (reordered high string first to match how
+        // the diagram draws rows) and its own key/scale/capo selects.
+        function boardContext(boardIndex) {
+            if (boardIndex === 2) {
+                const order = analyzerDisplayOrders[analyzerInstrument];
+                const instMinFrets = analyzerInstruments[analyzerInstrument].stringMinFrets;
+                return {
+                    key: document.getElementById('analyzer-scale-key').value,
+                    scaleType: document.getElementById('analyzer-scale-select').value,
+                    tuning: order.map(i => analyzerTuning[i]),
+                    stringMinFrets: order.map(i => instMinFrets[i] || 0),
+                    capo: analyzerCapo
+                };
+            }
+            return {
+                key: document.getElementById('key-select').value,
+                scaleType: document.getElementById('scale-type-select').value,
+                tuning: currentTuning,
+                stringMinFrets: instruments[currentInstrument].stringMinFrets,
+                capo: capo
+            };
+        }
+
         function updateFretboard(boardIndex) {
             const fretboardElement = document.getElementById(`fretboard${boardIndex + 1}`);
-            const key = document.getElementById('key-select').value;
-            const scaleType = document.getElementById('scale-type-select').value;
-            const tuning = currentTuning;
+            const ctx = boardContext(boardIndex);
+            const key = ctx.key;
+            const scaleType = ctx.scaleType;
+            const tuning = ctx.tuning;
+            const capo = ctx.capo;
             const showIntervals = showIntervalsPerBoard[boardIndex];
 
             const rootNoteIndex = notes.indexOf(key);
             const scale = scales[scaleType];
             const noteSet = new Set(scale.map(interval => (rootNoteIndex + intervals[interval]) % 12));
             const chordPCs = chordButtonPCs[boardIndex];
-            const stringMinFrets = instruments[currentInstrument].stringMinFrets;
+            const stringMinFrets = ctx.stringMinFrets;
 
             fretboardElement.innerHTML = '';
             for (let i = 0; i < 22; i++) {
@@ -1613,6 +1707,7 @@
             renderAnalyzerTuningControls();
             resetAnalyzerStrings();
             renderAnalyzerDiagram();
+            updateFretboard(2);
         }
 
         function renderAnalyzerTuningControls() {
@@ -1640,6 +1735,7 @@
                     document.getElementById('analyzer-tuning-preset').value = analyzerInstruments[analyzerInstrument].tuningPresets.length - 1;
                     analyzerSelectedIdx = 0;
                     renderAnalyzerDiagram();
+                    updateFretboard(2);
                 });
                 stringContainer.appendChild(select);
                 controlsElement.appendChild(stringContainer);
@@ -1661,6 +1757,8 @@
             renderAnalyzerTuningControls();
             resetAnalyzerStrings();
             renderAnalyzerDiagram();
+            renderChordButtons(2);
+            updateFretboard(2);
         }
 
         function setAnalyzerStringFret(stringIndex, fret) {
@@ -1760,8 +1858,11 @@
             { 8: 'b13', 9: '13' }
         ];
         const analyzerGenericLabels = ['1', 'b2', '2', 'b3', '3', '4', 'b5', '5', 'b6', '6', 'b7', '7'];
-        // Marker/box colors by chord-tone role (root, 3rd, 5th, 7th, 9th, 11th, 13th).
-        const analyzerRoleColors = ['#b9c145', '#f0a030', '#4db6e2', '#e07040', '#e05a5a', '#c9a227', '#d0506e'];
+        // Marker/box colors by chord-tone role (root, 3rd, 5th, 7th, 9th, 11th, 13th) —
+        // the same palette as the fretboard diagram's chord-button ring legend.
+        const analyzerRoleColors = ['#9b30ff', '#ff8c00', '#00b894', '#1565ff', '#ff4da6', '#c98a00', '#d63031'];
+        // Readable text color on each of those backgrounds.
+        const analyzerRoleTextColors = ['#fff', '#111', '#fff', '#fff', '#fff', '#111', '#fff'];
 
         function analyzerMarkerInfo(pc, interp, bassPc) {
             if (!interp) {
@@ -1819,7 +1920,9 @@
                 (presetObj && presetObj.notesLowToHigh) ? `${presetObj.name} Tuning` : 'Custom Tuning';
 
             // ---- Board: strings as horizontal rows, frets 0-15 left to right ----
-            const OPEN_W = 46, FRET_W = 52, NOTE_W = 46, ROW_H = 36, NUM_H = 28;
+            const OPEN_W = 42, FRET_W = 44, NOTE_W = 38, ROW_H = 32, NUM_H = 24;
+            // Same marker frets the main fretboard diagram shades.
+            const SHADED_FRETS = new Set([3, 5, 7, 9, 12, 15]);
             const wrap = document.getElementById('analyzer-board');
             wrap.innerHTML = '';
             const board = document.createElement('div');
@@ -1834,7 +1937,9 @@
                 const minFret = inst.stringMinFrets[stringIndex] || 0;
                 const pc = analyzerSoundingPc(stringIndex);
                 const mInfo = pc !== null ? analyzerMarkerInfo(pc, interp, data.bassPc) : null;
-                const roleColor = mInfo && mInfo.roleIdx !== null ? analyzerRoleColors[mInfo.roleIdx] : '#9a947c';
+                const hasRole = mInfo && mInfo.roleIdx !== null;
+                const roleColor = hasRole ? analyzerRoleColors[mInfo.roleIdx] : '#888';
+                const roleTextColor = hasRole ? analyzerRoleTextColors[mInfo.roleIdx] : '#fff';
 
                 // Open-position cell: interval circle when open, X when muted; click toggles.
                 const openCell = document.createElement('div');
@@ -1858,7 +1963,10 @@
 
                 for (let f = 1; f <= ANALYZER_FRETS; f++) {
                     const cell = document.createElement('div');
-                    cell.className = 'analyzer-cell fret-cell' + (f === 1 ? ' first-fret' : '') + (status.status === 'muted' ? ' muted-row' : '');
+                    cell.className = 'analyzer-cell fret-cell'
+                        + (f === 1 ? ' first-fret' : '')
+                        + (SHADED_FRETS.has(f) ? ' shaded' : '')
+                        + (status.status === 'muted' ? ' muted-row' : '');
                     if (f < minFret) {
                         cell.classList.add('missing');
                     } else {
@@ -1870,6 +1978,7 @@
                             const m = document.createElement('div');
                             m.className = 'analyzer-marker fretted' + (mInfo && mInfo.isRoot ? ' is-root' : '');
                             m.style.background = roleColor;
+                            m.style.color = roleTextColor;
                             m.textContent = mInfo ? mInfo.label : '';
                             cell.appendChild(m);
                         }
@@ -1897,19 +2006,6 @@
                 cell.textContent = f <= ANALYZER_FRETS ? f : '';
                 board.appendChild(cell);
             }
-
-            // Inlay dots at 3/5/7/9/15, double at 12.
-            const addInlayDot = (fret, y) => {
-                const dot = document.createElement('div');
-                dot.className = 'analyzer-inlay-dot';
-                dot.style.left = `${OPEN_W + (fret - 0.5) * FRET_W - 4.5}px`;
-                dot.style.top = `${y - 4.5}px`;
-                board.appendChild(dot);
-            };
-            const boardH = numStrings * ROW_H;
-            [3, 5, 7, 9, 15].forEach(f => addInlayDot(f, boardH / 2));
-            addInlayDot(12, boardH * 0.3);
-            addInlayDot(12, boardH * 0.7);
 
             wrap.appendChild(board);
 
@@ -2033,6 +2129,31 @@
                 renderAnalyzerDiagram();
             });
 
+            // The analyzer tab's scale fretboard (board 2) mirrors Fretboard 1's
+            // controls, but follows the analyzer's own tuning selected above.
+            renderChordButtons(2);
+            document.getElementById('analyzer-scale-key').addEventListener('change', () => {
+                renderChordButtons(2);
+                updateFretboard(2);
+            });
+            document.getElementById('analyzer-scale-select').addEventListener('change', () => {
+                renderChordButtons(2);
+                updateFretboard(2);
+            });
+            document.getElementById('analyzer-capo-select').addEventListener('change', e => {
+                analyzerCapo = parseInt(e.target.value, 10);
+                updateFretboard(2);
+            });
+            document.getElementById('show-intervals3').addEventListener('change', e => {
+                showIntervalsPerBoard[2] = e.target.checked;
+                updateFretboard(2);
+            });
+            document.getElementById('chord-override3').addEventListener('change', e => {
+                chordOverride[2] = e.target.value;
+                if (chordButtonActive[2] !== null) selectChordButton(2, chordButtonActive[2], { toggle: false });
+            });
+            updateFretboard(2);
+
             document.querySelectorAll('.view-tab').forEach(btn => {
                 btn.addEventListener('click', () => {
                     const view = btn.dataset.view;
@@ -2076,7 +2197,7 @@
 
             document.getElementById('chord-override1').addEventListener('change', e => {
                 chordOverride[0] = e.target.value;
-                if (chordButtonActive[0] !== null) selectChordButton(chordButtonActive[0]);
+                if (chordButtonActive[0] !== null) selectChordButton(0, chordButtonActive[0], { toggle: false });
             });
             document.getElementById('chord-override2').addEventListener('change', e => {
                 chordOverride[1] = e.target.value;

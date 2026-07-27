@@ -193,6 +193,44 @@
         .loop-chord { font-size: 18px; font-weight: bold; }
         .loop-arrow { color: #999; }
         .harmony-not-applicable { color: #666; font-style: italic; max-width: 700px; }
+
+        /* ---- Chord Analyzer ---- */
+        .analyzer-card {
+            display: inline-block; margin-top: 24px; padding: 28px 36px; border: 2px solid #222;
+            border-radius: 12px; background: #fff;
+        }
+        .analyzer-chord-name { font-size: 44px; font-weight: bold; line-height: 1.1; }
+        .analyzer-chord-notes { font-size: 15px; color: #555; font-family: "Courier New", monospace; margin-top: 4px; }
+        .analyzer-tuning-label { font-size: 13px; color: #777; margin-top: 6px; margin-bottom: 20px; }
+        .analyzer-diagram { position: relative; display: flex; }
+        .analyzer-string-col { display: flex; flex-direction: column; align-items: center; }
+        .analyzer-string-toggles { display: flex; gap: 4px; margin-bottom: 8px; }
+        .analyzer-toggle-btn {
+            width: 20px; height: 20px; border-radius: 50%; border: 1px solid #999; background: #fff;
+            font-size: 11px; font-weight: bold; line-height: 1; cursor: pointer; padding: 0;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .analyzer-toggle-btn.active-open { background: #2e7d32; color: #fff; border-color: #2e7d32; }
+        .analyzer-toggle-btn.active-mute { background: #c62828; color: #fff; border-color: #c62828; }
+        .analyzer-fret-cell {
+            width: 46px; height: 46px; border-right: 1px solid #333; border-bottom: 1px solid #333;
+            position: relative; cursor: pointer; flex-shrink: 0;
+        }
+        .analyzer-string-col:first-child .analyzer-fret-cell { border-left: 2px solid #333; }
+        .analyzer-fret-cell.nut-row { border-top: 4px solid #222; }
+        .analyzer-fret-cell.non-nut-row { border-top: 1px solid #333; }
+        .analyzer-fret-dot {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 30px; height: 30px; border-radius: 50%; background: #222; color: #fff;
+            display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold;
+        }
+        .analyzer-fret-labels { display: flex; flex-direction: column; margin-right: 4px; }
+        .analyzer-fret-label {
+            height: 46px; display: flex; align-items: center; justify-content: center;
+            font-size: 12px; color: #888; width: 26px;
+        }
+        .analyzer-fret-labels .analyzer-toggle-spacer { height: 28px; margin-bottom: 8px; }
+        .analyzer-string-name { font-size: 12px; color: #666; margin-top: 8px; }
     </style>
 </head>
 <body>
@@ -200,6 +238,7 @@
     <div class="view-tabs">
         <button type="button" class="view-tab active" data-view="fretboard">🎼 Fretboard</button>
         <button type="button" class="view-tab" data-view="harmony">🎹 Harmony</button>
+        <button type="button" class="view-tab" data-view="analyzer">🔍 Chord Analyzer</button>
     </div>
 
     <div id="view-fretboard" class="view">
@@ -287,6 +326,32 @@
             <select id="harmony-scale-select"></select>
         </div>
         <div id="harmony-output"></div>
+    </div>
+
+    <div id="view-analyzer" class="view hidden">
+        <p class="harmony-intro">
+            Click frets on the diagram to build a chord shape in <strong>any tuning</strong> — including
+            fully custom ones — and it's identified live. Fully independent from the other tabs' settings.
+        </p>
+        <div class="instrument-tabs">
+            <button type="button" class="instrument-tab active" data-analyzer-instrument="guitar">🎸 Guitar (6-String)</button>
+            <button type="button" class="instrument-tab" data-analyzer-instrument="banjo">🪕 Banjo (5-String)</button>
+        </div>
+        <div class="controls">
+            <label for="analyzer-tuning-preset">Tuning:</label>
+            <select id="analyzer-tuning-preset"></select>
+            <label for="analyzer-start-fret">Start Fret:</label>
+            <input type="number" id="analyzer-start-fret" value="1" min="0" max="19" style="width: 60px;">
+            <button type="button" id="analyzer-reset-btn">Reset</button>
+        </div>
+        <div id="analyzer-tuning-controls" class="tuning-controls hidden"></div>
+
+        <div id="analyzer-card" class="analyzer-card">
+            <div id="analyzer-chord-name" class="analyzer-chord-name">—</div>
+            <div id="analyzer-chord-notes" class="analyzer-chord-notes"></div>
+            <div id="analyzer-tuning-label" class="analyzer-tuning-label"></div>
+            <div id="analyzer-diagram" class="analyzer-diagram"></div>
+        </div>
     </div>
 
     <script>
@@ -559,6 +624,9 @@
         const LETTER_PC = { A: 0, B: 2, C: 3, D: 5, E: 7, F: 8, G: 10 };
         // Standard jazz convention: tritone subs are named on the flat side.
         const FLAT_SPELLING = ['A', 'Bb', 'B', 'C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab'];
+        // Common guitar-chord-chart convention for a standalone chord root (no scale
+        // context to anchor to) — matches typical songbook spelling.
+        const CHORD_ROOT_SPELLING = ['A', 'Bb', 'B', 'C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab'];
 
         // Spells a target pitch class as (baseLetter + letterSteps) with whatever
         // accidental is needed. Falls back to the sharp-only name for anything beyond
@@ -592,6 +660,14 @@
             'triad-tone-root', 'triad-tone-third', 'triad-tone-fifth', 'triad-tone-seventh',
             'triad-tone-ninth', 'triad-tone-eleventh', 'triad-tone-thirteenth'
         ];
+        const chordToneRoleNames = ['root', '3rd', '5th', '7th', '9th', '11th', '13th'];
+
+        // Display suffix for a chord-type key; anything not listed here just uses its
+        // own key verbatim (e.g. "m7", "maj7", "9", "7b9").
+        const chordSuffixes = { maj: '', min: 'm', dim: 'dim', aug: 'aug', sus2: 'sus2', sus4: 'sus4' };
+        function chordSuffixFor(qualityKey) {
+            return qualityKey in chordSuffixes ? chordSuffixes[qualityKey] : qualityKey;
+        }
 
         // Builds a stacked-third chord (root, 3rd, 5th, 7th within the scale) starting on
         // the given scale-degree index. Works for any scale length via modulo, though the
@@ -619,9 +695,7 @@
             const degreeNumber = Number(scale[degreeIndex].replace(/[^0-9]/g, ''));
             const rootName = spellScaleDegree(notes[rootNoteIndex], degreeNumber, degreeRootPc);
             const qualityName = qualityKey ? chordTypeGroups.flatMap(g => g.items).find(i => i.key === qualityKey).name : null;
-            const chordSuffixes = { maj: '', min: 'm', dim: 'dim', aug: 'aug', sus2: 'sus2', sus4: 'sus4' };
-            const suffix = qualityKey in chordSuffixes ? chordSuffixes[qualityKey] : qualityKey;
-            const label = qualityKey ? `${rootName}${suffix}` : `${rootName} (custom)`;
+            const label = qualityKey ? `${rootName}${chordSuffixFor(qualityKey)}` : `${rootName} (custom)`;
             return { rootName, rootPc: degreeRootPc, qualityKey, qualityName, label, pcs: usedPcs };
         }
 
@@ -1195,7 +1269,7 @@
             currentInstrument = key;
             currentTuning = instruments[key].defaultTuning.slice();
 
-            document.querySelectorAll('.instrument-tab').forEach(btn => {
+            document.querySelectorAll('#view-fretboard .instrument-tab').forEach(btn => {
                 btn.classList.toggle('active', btn.dataset.instrument === key);
             });
 
@@ -1415,10 +1489,296 @@
             document.getElementById('now-playing').textContent = 'Stopped';
         }
 
+        // ==================== Chord Analyzer tab ====================
+        // Fully independent of the Fretboard/Harmony tabs' state. Reuses the existing
+        // tuning-preset data (so altered/custom tunings from the Fretboard tab's
+        // infrastructure work here too) but keeps its own instrument/tuning/string state.
+
+        const analyzerInstruments = {
+            guitar: {
+                name: instruments.guitar.name,
+                stringLabels: ['Low E', 'A', 'D', 'G', 'B', 'High E'],
+                stringMinFrets: [0, 0, 0, 0, 0, 0],
+                defaultTuning: ['E', 'A', 'D', 'G', 'B', 'E'],
+                tuningPresets: instruments.guitar.tuningPresets
+            },
+            banjo: {
+                name: instruments.banjo.name,
+                // 5th string goes last (highest-sounding, reentrant) to match the
+                // low-to-high, left-to-right convention standard chord diagrams use.
+                stringLabels: ['4th', '3rd', '2nd', '1st', '5th (short)'],
+                stringMinFrets: [0, 0, 0, 0, 5],
+                defaultTuning: ['D', 'G', 'B', 'D', 'G'],
+                tuningPresets: instruments.banjo.tuningPresets.map(p =>
+                    p.notesLowToHigh ? { name: p.name, notesLowToHigh: [...p.notesLowToHigh, p.fifthString] } : p
+                )
+            }
+        };
+
+        let analyzerInstrument = 'guitar';
+        let analyzerTuning = analyzerInstruments.guitar.defaultTuning.slice();
+        let analyzerStringStatus = analyzerTuning.map(() => ({ status: 'open', fret: 0 }));
+
+        function resetAnalyzerStrings() {
+            analyzerStringStatus = analyzerTuning.map(() => ({ status: 'open', fret: 0 }));
+        }
+
+        function populateAnalyzerTuningPresetSelect() {
+            const select = document.getElementById('analyzer-tuning-preset');
+            select.innerHTML = '';
+            analyzerInstruments[analyzerInstrument].tuningPresets.forEach((preset, i) => {
+                const option = document.createElement('option');
+                option.value = i;
+                option.textContent = preset.notesLowToHigh
+                    ? `${preset.name} (${preset.notesLowToHigh.join(' ')})`
+                    : preset.name;
+                select.appendChild(option);
+            });
+        }
+
+        function applyAnalyzerTuningPreset(presetIndex) {
+            const preset = analyzerInstruments[analyzerInstrument].tuningPresets[presetIndex];
+            const controlsElement = document.getElementById('analyzer-tuning-controls');
+            if (!preset.notesLowToHigh) {
+                controlsElement.classList.remove('hidden');
+                return;
+            }
+            controlsElement.classList.add('hidden');
+            analyzerTuning = preset.notesLowToHigh.slice();
+            renderAnalyzerTuningControls();
+            resetAnalyzerStrings();
+            renderAnalyzerDiagram();
+        }
+
+        function renderAnalyzerTuningControls() {
+            const controlsElement = document.getElementById('analyzer-tuning-controls');
+            controlsElement.innerHTML = '';
+            const stringLabels = analyzerInstruments[analyzerInstrument].stringLabels;
+            analyzerTuning.forEach((note, stringIndex) => {
+                const stringContainer = document.createElement('div');
+                const label = document.createElement('div');
+                label.className = 'string-label';
+                label.textContent = stringLabels[stringIndex];
+                stringContainer.appendChild(label);
+
+                const select = document.createElement('select');
+                select.className = 'string-tuning';
+                notes.forEach(n => {
+                    const option = document.createElement('option');
+                    option.value = n;
+                    option.textContent = n;
+                    if (n === note) option.selected = true;
+                    select.appendChild(option);
+                });
+                select.addEventListener('change', e => {
+                    analyzerTuning[stringIndex] = e.target.value;
+                    document.getElementById('analyzer-tuning-preset').value = analyzerInstruments[analyzerInstrument].tuningPresets.length - 1;
+                    renderAnalyzerDiagram();
+                });
+                stringContainer.appendChild(select);
+                controlsElement.appendChild(stringContainer);
+            });
+        }
+
+        function switchAnalyzerInstrument(key) {
+            if (key === analyzerInstrument) return;
+            analyzerInstrument = key;
+            analyzerTuning = analyzerInstruments[key].defaultTuning.slice();
+
+            document.querySelectorAll('#view-analyzer .instrument-tab').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.analyzerInstrument === key);
+            });
+
+            populateAnalyzerTuningPresetSelect();
+            document.getElementById('analyzer-tuning-preset').value = 0;
+            document.getElementById('analyzer-tuning-controls').classList.add('hidden');
+            renderAnalyzerTuningControls();
+            resetAnalyzerStrings();
+            renderAnalyzerDiagram();
+        }
+
+        function setAnalyzerStringFret(stringIndex, fret) {
+            const minFret = analyzerInstruments[analyzerInstrument].stringMinFrets[stringIndex] || 0;
+            if (fret < minFret) return;
+            const current = analyzerStringStatus[stringIndex];
+            analyzerStringStatus[stringIndex] = (current.status === 'fretted' && current.fret === fret)
+                ? { status: 'open', fret: 0 }
+                : { status: 'fretted', fret };
+            renderAnalyzerDiagram();
+        }
+
+        function setAnalyzerStringOpenOrMute(stringIndex, status) {
+            analyzerStringStatus[stringIndex] = status === 'open' ? { status: 'open', fret: 0 } : { status: 'muted', fret: null };
+            renderAnalyzerDiagram();
+        }
+
+        // Identifies the chord from whatever's fretted, handling partial voicings
+        // (missing chord tones, e.g. no 5th) and slash chords (bass note != root) —
+        // tries every played note as a candidate root against the full chord-type
+        // library, picking the fewest-omitted-tones match, preferring the actual
+        // bass note as root on ties.
+        function identifyPlayedChord(tuning, statuses) {
+            const playedPcs = [];
+            let bassPc = null;
+            statuses.forEach((s, i) => {
+                if (s.status === 'muted') return;
+                const openPc = notes.indexOf(tuning[i]);
+                const pc = s.status === 'open' ? openPc : (openPc + s.fret) % 12;
+                playedPcs.push(pc);
+                if (bassPc === null) bassPc = pc;
+            });
+
+            if (playedPcs.length === 0) return { name: '—', notesText: '' };
+
+            const uniquePcs = [...new Set(playedPcs)];
+            if (uniquePcs.length === 1) {
+                const name = CHORD_ROOT_SPELLING[uniquePcs[0]];
+                return { name: `${name} (single note)`, notesText: name };
+            }
+
+            const qualityPriority = {};
+            let p = 0;
+            chordTypeGroups.forEach(g => g.items.forEach(item => { qualityPriority[item.key] = p++; }));
+
+            let best = null;
+            uniquePcs.forEach(rootPc => {
+                const relative = new Set(uniquePcs.map(pc => (pc - rootPc + 12) % 12));
+                Object.keys(chordQualities).forEach(qualityKey => {
+                    const qualitySet = new Set(chordQualities[qualityKey]);
+                    for (const r of relative) if (!qualitySet.has(r)) return;
+                    const score = chordQualities[qualityKey].length - relative.size;
+                    const isBassRoot = rootPc === bassPc;
+                    const candidate = { rootPc, qualityKey, score, isBassRoot };
+                    const better = !best
+                        || candidate.score < best.score
+                        || (candidate.score === best.score && candidate.isBassRoot && !best.isBassRoot)
+                        || (candidate.score === best.score && candidate.isBassRoot === best.isBassRoot && qualityPriority[qualityKey] < qualityPriority[best.qualityKey]);
+                    if (better) best = candidate;
+                });
+            });
+
+            if (!best) {
+                if (uniquePcs.length === 2) {
+                    const rootPc = bassPc;
+                    const otherPc = uniquePcs.find(pc => pc !== rootPc);
+                    const rel = (otherPc - rootPc + 12) % 12;
+                    const rootName = CHORD_ROOT_SPELLING[rootPc];
+                    const label = rel === 7 ? `${rootName}5` : `${rootName} + ${CHORD_ROOT_SPELLING[otherPc]}`;
+                    return { name: label, notesText: uniquePcs.map(pc => CHORD_ROOT_SPELLING[pc]).join(', ') };
+                }
+                return { name: 'Unidentified', notesText: uniquePcs.map(pc => CHORD_ROOT_SPELLING[pc]).join(', ') };
+            }
+
+            const rootName = CHORD_ROOT_SPELLING[best.rootPc];
+            let label = `${rootName}${chordSuffixFor(best.qualityKey)}`;
+            if (best.rootPc !== bassPc) label += `/${CHORD_ROOT_SPELLING[bassPc]}`;
+
+            const fullIntervals = chordQualities[best.qualityKey];
+            const relative = new Set(uniquePcs.map(pc => (pc - best.rootPc + 12) % 12));
+            const omittedRoles = [];
+            fullIntervals.forEach((iv, idx) => { if (!relative.has(iv)) omittedRoles.push(chordToneRoleNames[idx] || `#${idx + 1}`); });
+            if (omittedRoles.length) label += ` (no ${omittedRoles.join(', ')})`;
+
+            const notesText = uniquePcs.map(pc => {
+                const relPc = (pc - best.rootPc + 12) % 12;
+                const idx = fullIntervals.indexOf(relPc);
+                return { pc, idx: idx >= 0 ? idx : 99, name: idx >= 0 ? spellChordTone(rootName, idx, pc) : CHORD_ROOT_SPELLING[pc] };
+            }).sort((a, b) => a.idx - b.idx || a.pc - b.pc).map(x => x.name).join('–');
+
+            return { name: label, notesText };
+        }
+
+        function renderAnalyzerDiagram() {
+            const startFretInput = document.getElementById('analyzer-start-fret');
+            const startFret = Math.max(0, parseInt(startFretInput.value, 10) || 1);
+            const fretRows = 5;
+            const minFrets = analyzerInstruments[analyzerInstrument].stringMinFrets;
+            const stringLabels = analyzerInstruments[analyzerInstrument].stringLabels;
+
+            const diagram = document.getElementById('analyzer-diagram');
+            diagram.innerHTML = '';
+
+            const labelsCol = document.createElement('div');
+            labelsCol.className = 'analyzer-fret-labels';
+            const spacer = document.createElement('div');
+            spacer.className = 'analyzer-toggle-spacer';
+            labelsCol.appendChild(spacer);
+            for (let r = 0; r < fretRows; r++) {
+                const fretNum = startFret + r;
+                const lbl = document.createElement('div');
+                lbl.className = 'analyzer-fret-label';
+                lbl.textContent = fretNum === 0 ? 'Open' : `${fretNum}fr`;
+                labelsCol.appendChild(lbl);
+            }
+            diagram.appendChild(labelsCol);
+
+            analyzerTuning.forEach((openNote, stringIndex) => {
+                const col = document.createElement('div');
+                col.className = 'analyzer-string-col';
+                const status = analyzerStringStatus[stringIndex];
+
+                const toggles = document.createElement('div');
+                toggles.className = 'analyzer-string-toggles';
+
+                const openBtn = document.createElement('button');
+                openBtn.type = 'button';
+                openBtn.className = 'analyzer-toggle-btn' + (status.status === 'open' ? ' active-open' : '');
+                openBtn.textContent = 'O';
+                openBtn.title = 'Open string';
+                openBtn.addEventListener('click', () => setAnalyzerStringOpenOrMute(stringIndex, 'open'));
+                toggles.appendChild(openBtn);
+
+                const muteBtn = document.createElement('button');
+                muteBtn.type = 'button';
+                muteBtn.className = 'analyzer-toggle-btn' + (status.status === 'muted' ? ' active-mute' : '');
+                muteBtn.textContent = 'X';
+                muteBtn.title = 'Mute string';
+                muteBtn.addEventListener('click', () => setAnalyzerStringOpenOrMute(stringIndex, 'muted'));
+                toggles.appendChild(muteBtn);
+
+                col.appendChild(toggles);
+
+                for (let r = 0; r < fretRows; r++) {
+                    const fretNum = startFret + r;
+                    const cell = document.createElement('div');
+                    cell.className = 'analyzer-fret-cell ' + (fretNum === 0 ? 'nut-row' : 'non-nut-row');
+                    const minFret = minFrets[stringIndex] || 0;
+                    if (fretNum < minFret) {
+                        cell.style.background = '#eee';
+                        cell.style.cursor = 'not-allowed';
+                    } else {
+                        cell.addEventListener('click', () => setAnalyzerStringFret(stringIndex, fretNum));
+                        if (status.status === 'fretted' && status.fret === fretNum) {
+                            const dot = document.createElement('div');
+                            dot.className = 'analyzer-fret-dot';
+                            dot.textContent = fretNum;
+                            cell.appendChild(dot);
+                        }
+                    }
+                    col.appendChild(cell);
+                }
+
+                const strName = document.createElement('div');
+                strName.className = 'analyzer-string-name';
+                strName.textContent = `${stringLabels[stringIndex]}: ${openNote}`;
+                col.appendChild(strName);
+
+                diagram.appendChild(col);
+            });
+
+            const result = identifyPlayedChord(analyzerTuning, analyzerStringStatus);
+            document.getElementById('analyzer-chord-name').textContent = result.name;
+            document.getElementById('analyzer-chord-notes').textContent = result.notesText ? `Notes: ${result.notesText}` : '';
+            const presetSelect = document.getElementById('analyzer-tuning-preset');
+            const presetLabel = presetSelect.selectedOptions[0] ? presetSelect.selectedOptions[0].textContent : '';
+            document.getElementById('analyzer-tuning-label').textContent =
+                `${analyzerInstruments[analyzerInstrument].name} — Tuning: ${presetLabel} — Strings (low→high): ${analyzerTuning.join(' ')}`;
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             initializeSelects();
 
-            document.querySelectorAll('.instrument-tab').forEach(btn => {
+            document.querySelectorAll('#view-fretboard .instrument-tab').forEach(btn => {
                 btn.addEventListener('click', () => switchInstrument(btn.dataset.instrument));
             });
 
@@ -1428,12 +1788,28 @@
             document.getElementById('harmony-key-select').addEventListener('change', renderHarmonyTab);
             document.getElementById('harmony-scale-select').addEventListener('change', renderHarmonyTab);
 
+            // ---- Chord Analyzer tab: fully independent of the other tabs' state ----
+            populateAnalyzerTuningPresetSelect();
+            document.getElementById('analyzer-tuning-preset').value = 0;
+            renderAnalyzerTuningControls();
+            renderAnalyzerDiagram();
+            document.querySelectorAll('#view-analyzer .instrument-tab').forEach(btn => {
+                btn.addEventListener('click', () => switchAnalyzerInstrument(btn.dataset.analyzerInstrument));
+            });
+            document.getElementById('analyzer-tuning-preset').addEventListener('change', e => applyAnalyzerTuningPreset(Number(e.target.value)));
+            document.getElementById('analyzer-start-fret').addEventListener('change', renderAnalyzerDiagram);
+            document.getElementById('analyzer-reset-btn').addEventListener('click', () => {
+                resetAnalyzerStrings();
+                renderAnalyzerDiagram();
+            });
+
             document.querySelectorAll('.view-tab').forEach(btn => {
                 btn.addEventListener('click', () => {
                     const view = btn.dataset.view;
                     document.querySelectorAll('.view-tab').forEach(b => b.classList.toggle('active', b === btn));
                     document.getElementById('view-fretboard').classList.toggle('hidden', view !== 'fretboard');
                     document.getElementById('view-harmony').classList.toggle('hidden', view !== 'harmony');
+                    document.getElementById('view-analyzer').classList.toggle('hidden', view !== 'analyzer');
                     if (view === 'harmony') {
                         // One-time-per-visit copy of the Fretboard tab's current key/scale as a
                         // helpful starting point — after this, the two stay fully independent.

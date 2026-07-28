@@ -197,14 +197,16 @@
 
         /* ---- Harmony tab: tables left, circle of fifths in the space on the right ---- */
         .harmony-layout {
-            display: grid; grid-template-columns: minmax(0, 1fr) 400px;
+            display: grid;
+            /* Grows with the window so the circle gets as big as the space allows. */
+            grid-template-columns: minmax(0, 1fr) clamp(400px, 34vw, 660px);
             gap: 24px; align-items: start;
         }
         /* Keeps the circle in view while scrolling the chord tables. */
         .harmony-aside { position: sticky; top: 14px; }
         @media (max-width: 1100px) {
             .harmony-layout { grid-template-columns: minmax(0, 1fr); }
-            .harmony-aside { position: static; max-width: 400px; }
+            .harmony-aside { position: static; max-width: 460px; }
         }
         #circle-of-fifths svg { width: 100%; height: auto; display: block; }
         .cof-seg { cursor: pointer; }
@@ -1257,7 +1259,17 @@
             dominant: ['tonic'],
             unstable: ['tonic']
         };
-        const COF_CENTER = 210, COF_SIZE = 420;
+        const COF_CENTER = 230, COF_SIZE = 460;
+        // Each label gets its own ring, sized so the longest text it can hold still fits
+        // inside one 30° wedge — the chord names need the wider outer band of the two.
+        // The chord ring is the widest because at the left/right of the circle a
+        // horizontal label extends radially, so it needs room in both directions.
+        const COF_R = {
+            fnIn: 200, fnOut: 228,
+            letterIn: 158, letterOut: 200,
+            chordIn: 104, chordOut: 158,
+            numIn: 56, numOut: 104
+        };
         let cofSelectedDegree = null;
 
         function cofPolar(r, angleDeg) {
@@ -1323,52 +1335,53 @@
             });
             svg.appendChild(defs);
 
-            const R_FN_OUT = 204, R_FN_IN = 176;
-            const R_LETTER_OUT = 176, R_LETTER_IN = 126;
-            const R_NUM_OUT = 126, R_NUM_IN = 74;
-
             COF_PCS.forEach((pc, i) => {
                 const a0 = i * 30 - 15, a1 = i * 30 + 15, mid = i * 30;
                 const entry = byPc.get(pc);
                 const isDiatonic = !!entry;
                 const isTonic = pc === rootNoteIndex;
                 const fnColor = isDiatonic ? (COF_FN_COLORS[entry.fnKey] || '#777') : null;
+                const isSelected = isDiatonic && cofSelectedDegree === entry.degreeIndex;
+                const selectChord = () => {
+                    cofSelectedDegree = isSelected ? null : entry.degreeIndex;
+                    renderHarmonyTab();
+                };
 
                 // --- Outer ring: functional harmony label ---
                 const fnGroup = svgEl('g', { class: 'cof-label' });
                 fnGroup.appendChild(svgEl('path', {
-                    d: cofSectorPath(R_FN_IN, R_FN_OUT, a0, a1),
+                    d: cofSectorPath(COF_R.fnIn, COF_R.fnOut, a0, a1),
                     fill: isDiatonic ? fnColor : '#f0f0f0',
                     stroke: '#fff', 'stroke-width': '1'
                 }));
                 if (isDiatonic) {
-                    const [tx, ty] = cofPolar((R_FN_IN + R_FN_OUT) / 2, mid);
+                    const [tx, ty] = cofPolar((COF_R.fnIn + COF_R.fnOut) / 2, mid);
                     const t = svgEl('text', {
                         x: tx, y: ty, 'text-anchor': 'middle', 'dominant-baseline': 'central',
-                        fill: '#fff', 'font-size': '13', 'font-weight': 'bold'
+                        fill: '#fff', 'font-size': '15', 'font-weight': 'bold'
                     });
                     t.textContent = COF_FN_SHORT[entry.fnKey] || '';
                     fnGroup.appendChild(t);
                 }
                 svg.appendChild(fnGroup);
 
-                // --- Middle ring: letter name (click to change key) ---
+                // --- Letter ring: note name (click to change key) ---
                 const letterGroup = svgEl('g', { class: 'cof-seg' });
                 letterGroup.appendChild(svgEl('path', {
                     class: 'cof-seg-fill',
-                    d: cofSectorPath(R_LETTER_IN, R_LETTER_OUT, a0, a1),
+                    d: cofSectorPath(COF_R.letterIn, COF_R.letterOut, a0, a1),
                     fill: isTonic ? '#fff4d6' : (isDiatonic ? '#fff' : '#e9e9e9'),
                     stroke: '#333', 'stroke-width': isTonic ? '3' : '1'
                 }));
-                const [lx, ly] = cofPolar((R_LETTER_IN + R_LETTER_OUT) / 2, mid);
+                const [lx, ly] = cofPolar((COF_R.letterIn + COF_R.letterOut) / 2, mid);
+                const letterName = isDiatonic ? entry.chord.rootName : CHORD_ROOT_SPELLING[pc];
                 const letterText = svgEl('text', {
                     x: lx, y: ly, 'text-anchor': 'middle', 'dominant-baseline': 'central',
                     fill: isDiatonic ? '#111' : '#999',
-                    'font-size': isTonic ? '26' : '22', 'font-weight': 'bold', class: 'cof-label'
+                    'font-size': letterName.length > 2 ? '22' : (isTonic ? '28' : '25'),
+                    'font-weight': 'bold', class: 'cof-label'
                 });
-                letterText.textContent = isDiatonic
-                    ? entry.chord.rootName
-                    : CHORD_ROOT_SPELLING[pc];
+                letterText.textContent = letterName;
                 letterGroup.appendChild(letterText);
                 const lTitle = svgEl('title');
                 lTitle.textContent = `Set key to ${CHORD_ROOT_SPELLING[pc]}`;
@@ -1380,41 +1393,62 @@
                 });
                 svg.appendChild(letterGroup);
 
-                // --- Inner ring: roman numeral + chord (click to show movement) ---
-                const numGroup = svgEl('g', { class: isDiatonic ? 'cof-seg' : '' });
-                const isSelected = isDiatonic && cofSelectedDegree === entry.degreeIndex;
-                numGroup.appendChild(svgEl('path', {
+                // --- Chord ring: actual chord name (click to show movement) ---
+                const chordGroup = svgEl('g', { class: isDiatonic ? 'cof-seg' : '' });
+                chordGroup.appendChild(svgEl('path', {
                     class: 'cof-seg-fill',
-                    d: cofSectorPath(R_NUM_IN, R_NUM_OUT, a0, a1),
+                    d: cofSectorPath(COF_R.chordIn, COF_R.chordOut, a0, a1),
                     fill: !isDiatonic ? '#f5f5f5' : (isSelected ? '#e9d9ff' : '#fff'),
                     stroke: isSelected ? '#9b30ff' : '#bbb',
                     'stroke-width': isSelected ? '3' : '1'
                 }));
                 if (isDiatonic) {
-                    const [nx, ny] = cofPolar((R_NUM_IN + R_NUM_OUT) / 2 + 8, mid);
-                    const numText = svgEl('text', {
-                        x: nx, y: ny, 'text-anchor': 'middle', 'dominant-baseline': 'central',
-                        fill: fnColor, 'font-size': '17', 'font-weight': 'bold',
-                        'font-family': 'Georgia, serif', class: 'cof-label'
-                    });
-                    numText.textContent = entry.roman;
-                    numGroup.appendChild(numText);
-
-                    const [cx2, cy2] = cofPolar((R_NUM_IN + R_NUM_OUT) / 2 - 13, mid);
+                    const [cx2, cy2] = cofPolar((COF_R.chordIn + COF_R.chordOut) / 2, mid);
+                    // Scales whose stacked thirds don't match a named quality (e.g.
+                    // Bluegrass) label as "X (custom)" in the table — too long for the
+                    // ring, so the circle shows just the root.
+                    const chordLabel = entry.chord.qualityKey ? entry.chord.label : entry.chord.rootName;
                     const chordText = svgEl('text', {
                         x: cx2, y: cy2, 'text-anchor': 'middle', 'dominant-baseline': 'central',
-                        fill: '#555', 'font-size': '11', class: 'cof-label'
+                        fill: '#333',
+                        'font-size': chordLabel.length > 6 ? '11' : (chordLabel.length > 5 ? '13' : '15'),
+                        'font-weight': 'bold', class: 'cof-label'
                     });
-                    chordText.textContent = entry.chord.label;
-                    numGroup.appendChild(chordText);
+                    chordText.textContent = chordLabel;
+                    chordGroup.appendChild(chordText);
+                    const cTitle = svgEl('title');
+                    cTitle.textContent = `${entry.chord.label} (${entry.roman}) — ${entry.fn.label}. Click to see where it moves.`;
+                    chordGroup.appendChild(cTitle);
+                    chordGroup.addEventListener('click', selectChord);
+                }
+                svg.appendChild(chordGroup);
 
+                // --- Numeral ring: roman numeral (also clickable) ---
+                const numGroup = svgEl('g', { class: isDiatonic ? 'cof-seg' : '' });
+                numGroup.appendChild(svgEl('path', {
+                    class: 'cof-seg-fill',
+                    d: cofSectorPath(COF_R.numIn, COF_R.numOut, a0, a1),
+                    fill: !isDiatonic ? '#f5f5f5' : (isSelected ? '#e9d9ff' : '#fff'),
+                    stroke: isSelected ? '#9b30ff' : '#bbb',
+                    'stroke-width': isSelected ? '3' : '1'
+                }));
+                if (isDiatonic) {
+                    const [nx, ny] = cofPolar((COF_R.numIn + COF_R.numOut) / 2, mid);
+                    // Drop the trailing "?" an unmatched quality produces — the ring is
+                    // too narrow for it and the numeral alone still reads correctly.
+                    const romanLabel = entry.roman.replace(/\?$/, '');
+                    const numText = svgEl('text', {
+                        x: nx, y: ny, 'text-anchor': 'middle', 'dominant-baseline': 'central',
+                        fill: fnColor,
+                        'font-size': romanLabel.length > 4 ? '12' : (romanLabel.length > 3 ? '14' : '18'),
+                        'font-weight': 'bold', 'font-family': 'Georgia, serif', class: 'cof-label'
+                    });
+                    numText.textContent = romanLabel;
+                    numGroup.appendChild(numText);
                     const nTitle = svgEl('title');
                     nTitle.textContent = `${entry.chord.label} (${entry.roman}) — ${entry.fn.label}. Click to see where it moves.`;
                     numGroup.appendChild(nTitle);
-                    numGroup.addEventListener('click', () => {
-                        cofSelectedDegree = cofSelectedDegree === entry.degreeIndex ? null : entry.degreeIndex;
-                        renderHarmonyTab();
-                    });
+                    numGroup.addEventListener('click', selectChord);
                 }
                 svg.appendChild(numGroup);
             });
@@ -1424,7 +1458,7 @@
                 const from = diatonic[cofSelectedDegree];
                 const fromIdx = COF_PCS.indexOf(from.chord.rootPc);
                 const targets = cofMovementTargets(diatonic, cofSelectedDegree);
-                const R_ARROW = (R_NUM_IN + R_NUM_OUT) / 2 - 30;
+                const R_ARROW = COF_R.numIn - 6;
                 const [fx, fy] = cofPolar(R_ARROW, fromIdx * 30);
                 targets.forEach(t => {
                     const toIdx = COF_PCS.indexOf(t.chord.rootPc);

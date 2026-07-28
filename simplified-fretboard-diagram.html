@@ -198,8 +198,11 @@
         /* ---- Harmony tab: tables left, circle of fifths in the space on the right ---- */
         .harmony-layout {
             display: grid;
-            /* Grows with the window so the circle gets as big as the space allows. */
-            grid-template-columns: minmax(0, 1fr) clamp(400px, 34vw, 660px);
+            /* Cap the table column at its own content width (the tables max out at
+               900px) so the circle sits right beside it instead of being pushed to the
+               far edge. The circle still grows with the window. */
+            grid-template-columns: minmax(0, 920px) clamp(400px, 34vw, 660px);
+            justify-content: start;
             gap: 24px; align-items: start;
         }
         /* Keeps the circle in view while scrolling the chord tables. */

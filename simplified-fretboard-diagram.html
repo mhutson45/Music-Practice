@@ -195,6 +195,34 @@
         .loop-arrow { color: #999; }
         .harmony-not-applicable { color: #666; font-style: italic; max-width: 700px; }
 
+        /* ---- Harmony tab: tables left, circle of fifths in the space on the right ---- */
+        .harmony-layout {
+            display: grid; grid-template-columns: minmax(0, 1fr) 400px;
+            gap: 24px; align-items: start;
+        }
+        /* Keeps the circle in view while scrolling the chord tables. */
+        .harmony-aside { position: sticky; top: 14px; }
+        @media (max-width: 1100px) {
+            .harmony-layout { grid-template-columns: minmax(0, 1fr); }
+            .harmony-aside { position: static; max-width: 400px; }
+        }
+        #circle-of-fifths svg { width: 100%; height: auto; display: block; }
+        .cof-seg { cursor: pointer; }
+        .cof-seg:hover .cof-seg-fill { filter: brightness(0.93); }
+        .cof-label { pointer-events: none; user-select: none; }
+        .cof-hint { font-size: 12px; color: #777; line-height: 1.5; margin: 10px 0 8px 0; }
+        .cof-legend { display: flex; flex-wrap: wrap; gap: 10px; font-size: 12px; color: #555; }
+        .cof-legend span { display: inline-flex; align-items: center; gap: 4px; }
+        .cof-legend .swatch { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+        .cof-movement { margin-top: 12px; font-size: 13px; color: #333; }
+        .cof-movement .cof-move-title { font-weight: bold; margin-bottom: 6px; }
+        .cof-move-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+        .cof-move-chip {
+            padding: 4px 9px; border-radius: 999px; font-size: 12px;
+            border: 1px solid #ccc; background: #fafafa; color: #333;
+        }
+        .cof-move-chip.strong { font-weight: bold; color: #fff; border-color: transparent; }
+
         /* ---- Chord Analyzer (light theme, matching the fretboard diagram) ---- */
         /* Two columns: the clickable board on the left, the analysis panels on the
            right, so the whole chord + its readings fit on one screen. */
@@ -370,7 +398,21 @@
             <label for="harmony-scale-select">Select Scale:</label>
             <select id="harmony-scale-select"></select>
         </div>
-        <div id="harmony-output"></div>
+        <div class="harmony-layout">
+            <div id="harmony-output"></div>
+            <aside class="harmony-aside">
+                <div class="analyzer-panel">
+                    <h2 class="analyzer-panel-title">Circle of Fifths</h2>
+                    <div id="circle-of-fifths"></div>
+                    <p class="cof-hint">
+                        Click an <strong>outer letter</strong> to change key · click an
+                        <strong>inner chord</strong> to see where it wants to go.
+                    </p>
+                    <div id="cof-legend" class="cof-legend"></div>
+                    <div id="cof-movement" class="cof-movement"></div>
+                </div>
+            </aside>
+        </div>
     </div>
 
     <div id="view-analyzer" class="view hidden">
@@ -1002,8 +1044,23 @@
                 msg.className = 'harmony-not-applicable';
                 msg.textContent = 'Diatonic chords, function, and related modes are only defined for 7-note scales. Pick a 7-note scale (any mode of major, melodic minor, or harmonic minor, or the pentatonic/blues scales) to see the chart.';
                 output.appendChild(msg);
+                renderCircleOfFifths(rootNoteIndex, null);
                 return;
             }
+
+            // Every diatonic chord, with its numeral and function — shared by the table
+            // below and the circle of fifths.
+            const diatonic = scale.map((intervalName, degreeIndex) => {
+                const chord = computeDiatonicChord(rootNoteIndex, scale, degreeIndex);
+                const degreeNumber = Number(intervalName.replace(/[^0-9]/g, ''));
+                const fn = functionLabelForDegree(degreeNumber, chord.qualityKey);
+                return {
+                    degreeIndex, intervalName, chord,
+                    roman: buildRomanNumeral(intervalName, chord.qualityKey),
+                    fn,
+                    fnKey: (fn.cls || '').replace('function-', '')
+                };
+            });
 
             // ---- Diatonic chords table ----
             const tableSection = document.createElement('div');
@@ -1021,11 +1078,7 @@
             table.innerHTML = '<thead><tr><th>Degree</th><th>Roman Numeral</th><th>Chord</th><th>Notes</th><th>Function</th></tr></thead>';
             const tbody = document.createElement('tbody');
 
-            scale.forEach((intervalName, degreeIndex) => {
-                const chord = computeDiatonicChord(rootNoteIndex, scale, degreeIndex);
-                const degreeNumber = Number(intervalName.replace(/[^0-9]/g, ''));
-                const roman = buildRomanNumeral(intervalName, chord.qualityKey);
-                const fn = functionLabelForDegree(degreeNumber, chord.qualityKey);
+            diatonic.forEach(({ intervalName, degreeIndex, chord, roman, fn }) => {
                 const noteNames = [...chord.pcs.keys()]
                     .map(pc => ({ pc, idx: chord.pcs.get(pc) }))
                     .sort((a, b) => a.idx - b.idx)
@@ -1184,6 +1237,253 @@
             });
             loopSection.appendChild(loopList);
             output.appendChild(loopSection);
+
+            renderCircleOfFifths(rootNoteIndex, diatonic);
+        }
+
+        // ==================== Circle of fifths ====================
+        // The letter ring is fixed with C at the top; which segments light up, and the
+        // numeral/function labels they carry, follow the selected key and mode. Modes of
+        // the major scale land on 7 adjacent segments; scales with altered degrees (e.g.
+        // harmonic minor) deliberately show a scattered pattern, since that gap is
+        // exactly what makes them sound outside the plain key.
+        const COF_PCS = [3, 10, 5, 0, 7, 2, 9, 4, 11, 6, 1, 8]; // C G D A E B F# C# G# D# A# F
+        const COF_FN_COLORS = { tonic: '#2e7d32', subdominant: '#1565c0', dominant: '#c62828', unstable: '#6a1b9a' };
+        const COF_FN_SHORT = { tonic: 'T', subdominant: 'S', dominant: 'D', unstable: 'ø' };
+        // Where each function most naturally moves next, in classic functional practice.
+        const COF_FN_MOVEMENT = {
+            tonic: ['subdominant', 'dominant', 'unstable'],
+            subdominant: ['dominant', 'unstable', 'tonic'],
+            dominant: ['tonic'],
+            unstable: ['tonic']
+        };
+        const COF_CENTER = 210, COF_SIZE = 420;
+        let cofSelectedDegree = null;
+
+        function cofPolar(r, angleDeg) {
+            const a = (angleDeg - 90) * Math.PI / 180;
+            return [COF_CENTER + r * Math.cos(a), COF_CENTER + r * Math.sin(a)];
+        }
+
+        // Annular sector path for one segment of a ring.
+        function cofSectorPath(rIn, rOut, a0, a1) {
+            const [x0o, y0o] = cofPolar(rOut, a0), [x1o, y1o] = cofPolar(rOut, a1);
+            const [x1i, y1i] = cofPolar(rIn, a1), [x0i, y0i] = cofPolar(rIn, a0);
+            return `M ${x0o} ${y0o} A ${rOut} ${rOut} 0 0 1 ${x1o} ${y1o} L ${x1i} ${y1i} A ${rIn} ${rIn} 0 0 0 ${x0i} ${y0i} Z`;
+        }
+
+        function svgEl(tag, attrs = {}) {
+            const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+            Object.entries(attrs).forEach(([k, v]) => el.setAttribute(k, v));
+            return el;
+        }
+
+        // Chords the given degree most naturally moves to. "Strong" = the classic pulls:
+        // root motion down a perfect fifth (V-I, ii-V, vi-ii...), a dominant or unstable
+        // chord resolving to the tonic, and subdominant heading to dominant (IV-V, ii-V).
+        function cofMovementTargets(diatonic, fromDegree) {
+            const from = diatonic[fromDegree];
+            const fifthDownPc = (from.chord.rootPc + 5) % 12;
+            const allowed = COF_FN_MOVEMENT[from.fnKey] || ['tonic'];
+            return diatonic
+                .filter(d => d.degreeIndex !== fromDegree && allowed.includes(d.fnKey))
+                .map(d => ({
+                    ...d,
+                    strong: d.chord.rootPc === fifthDownPc
+                        || ((from.fnKey === 'dominant' || from.fnKey === 'unstable') && d.degreeIndex === 0)
+                        || (from.fnKey === 'subdominant' && d.fnKey === 'dominant')
+                }))
+                .sort((a, b) => (b.strong - a.strong) || (a.degreeIndex - b.degreeIndex));
+        }
+
+        function renderCircleOfFifths(rootNoteIndex, diatonic) {
+            const host = document.getElementById('circle-of-fifths');
+            const legend = document.getElementById('cof-legend');
+            const movement = document.getElementById('cof-movement');
+            host.innerHTML = '';
+            legend.innerHTML = '';
+            movement.innerHTML = '';
+
+            // pitch class -> diatonic chord entry
+            const byPc = new Map();
+            if (diatonic) diatonic.forEach(d => byPc.set(d.chord.rootPc, d));
+            if (cofSelectedDegree !== null && (!diatonic || cofSelectedDegree >= diatonic.length)) cofSelectedDegree = null;
+
+            const svg = svgEl('svg', { viewBox: `0 0 ${COF_SIZE} ${COF_SIZE}`, role: 'img' });
+
+            // Arrowhead markers, one per function colour.
+            const defs = svgEl('defs');
+            Object.entries(COF_FN_COLORS).forEach(([fn, color]) => {
+                const marker = svgEl('marker', {
+                    id: `cof-arrow-${fn}`, viewBox: '0 0 10 10', refX: '9', refY: '5',
+                    markerWidth: '5', markerHeight: '5', orient: 'auto-start-reverse'
+                });
+                marker.appendChild(svgEl('path', { d: 'M 0 1 L 10 5 L 0 9 z', fill: color }));
+                defs.appendChild(marker);
+            });
+            svg.appendChild(defs);
+
+            const R_FN_OUT = 204, R_FN_IN = 176;
+            const R_LETTER_OUT = 176, R_LETTER_IN = 126;
+            const R_NUM_OUT = 126, R_NUM_IN = 74;
+
+            COF_PCS.forEach((pc, i) => {
+                const a0 = i * 30 - 15, a1 = i * 30 + 15, mid = i * 30;
+                const entry = byPc.get(pc);
+                const isDiatonic = !!entry;
+                const isTonic = pc === rootNoteIndex;
+                const fnColor = isDiatonic ? (COF_FN_COLORS[entry.fnKey] || '#777') : null;
+
+                // --- Outer ring: functional harmony label ---
+                const fnGroup = svgEl('g', { class: 'cof-label' });
+                fnGroup.appendChild(svgEl('path', {
+                    d: cofSectorPath(R_FN_IN, R_FN_OUT, a0, a1),
+                    fill: isDiatonic ? fnColor : '#f0f0f0',
+                    stroke: '#fff', 'stroke-width': '1'
+                }));
+                if (isDiatonic) {
+                    const [tx, ty] = cofPolar((R_FN_IN + R_FN_OUT) / 2, mid);
+                    const t = svgEl('text', {
+                        x: tx, y: ty, 'text-anchor': 'middle', 'dominant-baseline': 'central',
+                        fill: '#fff', 'font-size': '13', 'font-weight': 'bold'
+                    });
+                    t.textContent = COF_FN_SHORT[entry.fnKey] || '';
+                    fnGroup.appendChild(t);
+                }
+                svg.appendChild(fnGroup);
+
+                // --- Middle ring: letter name (click to change key) ---
+                const letterGroup = svgEl('g', { class: 'cof-seg' });
+                letterGroup.appendChild(svgEl('path', {
+                    class: 'cof-seg-fill',
+                    d: cofSectorPath(R_LETTER_IN, R_LETTER_OUT, a0, a1),
+                    fill: isTonic ? '#fff4d6' : (isDiatonic ? '#fff' : '#e9e9e9'),
+                    stroke: '#333', 'stroke-width': isTonic ? '3' : '1'
+                }));
+                const [lx, ly] = cofPolar((R_LETTER_IN + R_LETTER_OUT) / 2, mid);
+                const letterText = svgEl('text', {
+                    x: lx, y: ly, 'text-anchor': 'middle', 'dominant-baseline': 'central',
+                    fill: isDiatonic ? '#111' : '#999',
+                    'font-size': isTonic ? '26' : '22', 'font-weight': 'bold', class: 'cof-label'
+                });
+                letterText.textContent = isDiatonic
+                    ? entry.chord.rootName
+                    : CHORD_ROOT_SPELLING[pc];
+                letterGroup.appendChild(letterText);
+                const lTitle = svgEl('title');
+                lTitle.textContent = `Set key to ${CHORD_ROOT_SPELLING[pc]}`;
+                letterGroup.appendChild(lTitle);
+                letterGroup.addEventListener('click', () => {
+                    document.getElementById('harmony-key-select').value = notes[pc];
+                    cofSelectedDegree = null;
+                    renderHarmonyTab();
+                });
+                svg.appendChild(letterGroup);
+
+                // --- Inner ring: roman numeral + chord (click to show movement) ---
+                const numGroup = svgEl('g', { class: isDiatonic ? 'cof-seg' : '' });
+                const isSelected = isDiatonic && cofSelectedDegree === entry.degreeIndex;
+                numGroup.appendChild(svgEl('path', {
+                    class: 'cof-seg-fill',
+                    d: cofSectorPath(R_NUM_IN, R_NUM_OUT, a0, a1),
+                    fill: !isDiatonic ? '#f5f5f5' : (isSelected ? '#e9d9ff' : '#fff'),
+                    stroke: isSelected ? '#9b30ff' : '#bbb',
+                    'stroke-width': isSelected ? '3' : '1'
+                }));
+                if (isDiatonic) {
+                    const [nx, ny] = cofPolar((R_NUM_IN + R_NUM_OUT) / 2 + 8, mid);
+                    const numText = svgEl('text', {
+                        x: nx, y: ny, 'text-anchor': 'middle', 'dominant-baseline': 'central',
+                        fill: fnColor, 'font-size': '17', 'font-weight': 'bold',
+                        'font-family': 'Georgia, serif', class: 'cof-label'
+                    });
+                    numText.textContent = entry.roman;
+                    numGroup.appendChild(numText);
+
+                    const [cx2, cy2] = cofPolar((R_NUM_IN + R_NUM_OUT) / 2 - 13, mid);
+                    const chordText = svgEl('text', {
+                        x: cx2, y: cy2, 'text-anchor': 'middle', 'dominant-baseline': 'central',
+                        fill: '#555', 'font-size': '11', class: 'cof-label'
+                    });
+                    chordText.textContent = entry.chord.label;
+                    numGroup.appendChild(chordText);
+
+                    const nTitle = svgEl('title');
+                    nTitle.textContent = `${entry.chord.label} (${entry.roman}) — ${entry.fn.label}. Click to see where it moves.`;
+                    numGroup.appendChild(nTitle);
+                    numGroup.addEventListener('click', () => {
+                        cofSelectedDegree = cofSelectedDegree === entry.degreeIndex ? null : entry.degreeIndex;
+                        renderHarmonyTab();
+                    });
+                }
+                svg.appendChild(numGroup);
+            });
+
+            // --- Movement arrows for the selected chord ---
+            if (diatonic && cofSelectedDegree !== null) {
+                const from = diatonic[cofSelectedDegree];
+                const fromIdx = COF_PCS.indexOf(from.chord.rootPc);
+                const targets = cofMovementTargets(diatonic, cofSelectedDegree);
+                const R_ARROW = (R_NUM_IN + R_NUM_OUT) / 2 - 30;
+                const [fx, fy] = cofPolar(R_ARROW, fromIdx * 30);
+                targets.forEach(t => {
+                    const toIdx = COF_PCS.indexOf(t.chord.rootPc);
+                    const [tx, ty] = cofPolar(R_ARROW, toIdx * 30);
+                    const color = COF_FN_COLORS[t.fnKey] || '#777';
+                    // Curve each arrow through the middle so they fan out instead of overlapping.
+                    const cxm = (fx + tx) / 2, cym = (fy + ty) / 2;
+                    const ctrlX = COF_CENTER + (cxm - COF_CENTER) * 0.35;
+                    const ctrlY = COF_CENTER + (cym - COF_CENTER) * 0.35;
+                    svg.appendChild(svgEl('path', {
+                        d: `M ${fx} ${fy} Q ${ctrlX} ${ctrlY} ${tx} ${ty}`,
+                        fill: 'none', stroke: color,
+                        'stroke-width': t.strong ? '3.5' : '1.5',
+                        'stroke-dasharray': t.strong ? '' : '5 4',
+                        opacity: t.strong ? '0.95' : '0.5',
+                        'marker-end': `url(#cof-arrow-${t.fnKey || 'tonic'})`
+                    }));
+                });
+                // Dot marking where the motion starts.
+                svg.appendChild(svgEl('circle', { cx: fx, cy: fy, r: '5', fill: '#9b30ff' }));
+            }
+
+            host.appendChild(svg);
+
+            // --- Legend ---
+            [['tonic', 'Tonic (T)'], ['subdominant', 'Subdominant (S)'], ['dominant', 'Dominant (D)'], ['unstable', 'Unstable (ø)']]
+                .forEach(([fn, label]) => {
+                    const span = document.createElement('span');
+                    const sw = document.createElement('span');
+                    sw.className = 'swatch';
+                    sw.style.background = COF_FN_COLORS[fn];
+                    span.appendChild(sw);
+                    span.appendChild(document.createTextNode(label));
+                    legend.appendChild(span);
+                });
+
+            // --- Movement summary text ---
+            if (diatonic && cofSelectedDegree !== null) {
+                const from = diatonic[cofSelectedDegree];
+                const targets = cofMovementTargets(diatonic, cofSelectedDegree);
+                const title = document.createElement('div');
+                title.className = 'cof-move-title';
+                title.textContent = `${from.chord.label} (${from.roman}, ${from.fn.label}) moves to:`;
+                movement.appendChild(title);
+                const chips = document.createElement('div');
+                chips.className = 'cof-move-chips';
+                targets.forEach(t => {
+                    const chip = document.createElement('span');
+                    chip.className = 'cof-move-chip' + (t.strong ? ' strong' : '');
+                    if (t.strong) chip.style.background = COF_FN_COLORS[t.fnKey] || '#777';
+                    chip.textContent = `${t.chord.label} (${t.roman})`;
+                    chips.appendChild(chip);
+                });
+                movement.appendChild(chips);
+                const note = document.createElement('div');
+                note.className = 'cof-hint';
+                note.textContent = 'Solid arrows are the strong pulls (down a fifth, or a dominant resolving to the tonic); dashed are the looser options.';
+                movement.appendChild(note);
+            }
         }
 
         // Diatonic chord buttons live on Fretboard 1 (board 0) and on the Chord
@@ -2149,8 +2449,13 @@
             // ---- Harmony tab: fully independent of the Fretboard tab's state ----
             initializeHarmonySelects();
             renderHarmonyTab();
-            document.getElementById('harmony-key-select').addEventListener('change', renderHarmonyTab);
-            document.getElementById('harmony-scale-select').addEventListener('change', renderHarmonyTab);
+            // Changing key or scale invalidates whichever circle-of-fifths chord was selected.
+            ['harmony-key-select', 'harmony-scale-select'].forEach(id => {
+                document.getElementById(id).addEventListener('change', () => {
+                    cofSelectedDegree = null;
+                    renderHarmonyTab();
+                });
+            });
 
             // ---- Chord Analyzer tab: fully independent of the other tabs' state ----
             populateAnalyzerTuningPresetSelect();
@@ -2203,6 +2508,7 @@
                         // helpful starting point — after this, the two stay fully independent.
                         document.getElementById('harmony-key-select').value = document.getElementById('key-select').value;
                         document.getElementById('harmony-scale-select').value = document.getElementById('scale-type-select').value;
+                        cofSelectedDegree = null;
                         renderHarmonyTab();
                     }
                 });
